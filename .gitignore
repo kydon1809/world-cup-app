@@ -1,0 +1,12 @@
+# Next.js / Node
+node_modules/
+.next/
+npm-debug.log
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Secrets
+.env

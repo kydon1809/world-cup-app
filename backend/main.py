@@ -9,7 +9,6 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 import models
 from datetime import datetime
-from fastapi.middleware.cors import CORSMiddleware
 
 # NEW: Import the security libraries
 import bcrypt
@@ -27,19 +26,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+# --- ONLY ONE BOUNCER ALLOWED ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # The "*" means "allow requests from any website"
-    allow_credentials=True,
+    allow_credentials=False, # MUST be False when using "*"
     allow_methods=["*"],  
-    allow_headers=["*"],
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"], 
-    allow_credentials=True,
-    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -51,26 +44,22 @@ def get_db():
         db.close()
 
 # --- SECURITY UTILITIES ---
-# Tells Python to use the bcrypt algorithm to scramble passwords
-# --- SECURITY UTILITIES ---
 def get_password_hash(password: str) -> str:
-    # Generate a random salt and hash the password
     salt = bcrypt.gensalt()
     hashed_bytes = bcrypt.hashpw(password.encode('utf-8'), salt)
     return hashed_bytes.decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # Check if the typed password matches the stored hash
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 # --- PYDANTIC SCHEMAS ---
 class UserCreate(BaseModel):
     Username: str
     Email: EmailStr
-    Password: str  # NEW: Expect a password when creating an account
+    Password: str  
 
 class UserLogin(BaseModel):
-    username: str  # NEW: Schema specifically for the login form
+    username: str  
     password: str
 
 class UserResponse(BaseModel):
@@ -144,7 +133,6 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="Username or Email already registered.")
     
-    # NEW: Scramble the password before handing it to the SQL database!
     hashed_pw = get_password_hash(user.Password)
     
     db_user = models.User(Username=user.Username, Email=user.Email, PasswordHash=hashed_pw)
@@ -153,17 +141,13 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(db_user)
     return db_user
 
-# NEW: The Login Route!
 @app.post("/api/login", response_model=UserResponse)
 def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
-    # Find the user by username
     user = db.query(models.User).filter(models.User.Username == credentials.username).first()
     
-    # If the user doesn't exist, or the passwords don't match, reject them
     if not user or not verify_password(credentials.password, user.PasswordHash):
         raise HTTPException(status_code=401, detail="Invalid username or password.")
         
-    # If it's a match, send the user data back to the frontend
     return user
 
 @app.get("/api/users", response_model=List[UserResponse])

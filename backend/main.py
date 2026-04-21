@@ -9,6 +9,7 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 import models
 from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
 
 # NEW: Import the security libraries
 import bcrypt
@@ -25,10 +26,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(
-    title="2026 World Cup Family App API",
-    description="Backend for the family World Cup Daily Pick 'em",
-    version="1.0.0"
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # The "*" means "allow requests from any website"
+    allow_credentials=True,
+    allow_methods=["*"],  
+    allow_headers=["*"],
 )
 
 app.add_middleware(

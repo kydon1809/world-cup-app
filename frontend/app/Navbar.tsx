@@ -27,14 +27,14 @@ export default function Navbar() {
           
           <div className="flex-shrink-0 font-black text-2xl tracking-tighter uppercase">
             <Link href="/" className="hover:text-blue-800 transition-colors">
-              ⚽ WC <span className="text-red-600">2026</span>
+              WC <span className="text-red-600">2026</span>
             </Link>
           </div>
 
           <div className="hidden md:flex space-x-2 flex-1 justify-center">
             {/* CHANGED: Added '/teams' to the paths and 'Teams' to the labels */}
             {['/', '/bracket', '/teams', '/standings', '/stats'].map((path, idx) => {
-              const labels = ['Daily Picks', 'Knockout', 'Teams', 'Standings', 'Stats'];
+              const labels = ['Picks', 'Knockout', 'Teams', 'Standings', 'Stats'];
               return (
                 <Link 
                   key={path}

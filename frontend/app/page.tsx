@@ -146,7 +146,7 @@ export default function Home() {
       if (res.ok) {
         const newUser = await res.json();
         localStorage.setItem('wc_user', JSON.stringify(newUser));
-        window.location.reload();
+        window.location.href = '/welcome';
       } else {
         setAuthError("Username might already be taken.");
       }
@@ -229,12 +229,12 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 max-w-md w-full">
           
           <div className="text-center mb-8">
-            <div className="text-4xl mb-2">⚽</div>
+            <div className="text-4xl mb-2"></div>
             <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900">
               {isLoginMode ? "Welcome Back" : "Create Account"}
             </h1>
             <p className="text-slate-500 font-bold mt-2">
-              {isLoginMode ? "Sign in to make your daily picks." : "Join the family tournament."}
+              {isLoginMode ? "Sign in to make your Picks." : "Join the family tournament."}
             </p>
           </div>
 
@@ -298,12 +298,11 @@ export default function Home() {
             <p className="text-sm font-bold text-slate-500">
               {isLoginMode ? "Don't have an account?" : "Already have an account?"}
             </p>
-            {/* UPDATED: Toggle button with hover box styling */}
             <button 
               onClick={() => {
                 setIsLoginMode(!isLoginMode);
                 setAuthError("");
-                setShowPassword(false); // Hide password when switching modes
+                setShowPassword(false);
               }}
               className="mt-3 px-6 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-2 border-transparent hover:border-red-600 rounded-xl font-black uppercase tracking-widest text-sm transition-all"
             >
@@ -368,7 +367,7 @@ export default function Home() {
               </div>
             </div>
 
-            <h2 className="text-2xl font-black mb-4 pt-2 flex items-center gap-2 uppercase tracking-wide text-slate-900">📅 Matches</h2>
+            <h2 className="text-2xl font-black mb-4 pt-2 flex items-center gap-2 uppercase tracking-wide text-slate-900">Matches</h2>
             
             {matchesToDisplay.map((match) => {
               const isPastDay = match.date < todayStr;
@@ -380,13 +379,14 @@ export default function Home() {
               return (
                 <div key={match.id} className="bg-white rounded-xl border border-slate-200 p-6 flex flex-col justify-between items-center gap-4 shadow-sm">
                   
-                  <div className="flex flex-col md:flex-row w-full items-center gap-6">
-                    <div className="text-center md:text-left w-full md:w-1/4">
+                  {/* UPDATED: Centered Layout Stack */}
+                  <div className="flex flex-col w-full items-center gap-4">
+                    <div className="text-center">
                       <span className="text-xs font-black uppercase text-red-600 tracking-widest block">{match.group}</span>
                       <span className="text-sm font-bold text-slate-500">{match.time}</span>
                     </div>
 
-                    <div className="flex w-full md:w-3/4 items-center justify-center gap-2 sm:gap-4">
+                    <div className="flex w-full items-center justify-center gap-2 sm:gap-4">
                       <button 
                         onClick={() => submitPick(match.id, match.home)}
                         disabled={isLocked}
@@ -438,7 +438,7 @@ export default function Home() {
                       onClick={() => setCompareMatch(match)}
                       className="text-xs font-black uppercase tracking-widest text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-4 py-1.5 rounded-full transition-colors flex items-center gap-2"
                     >
-                      📊 Tale of the Tape
+                      Look at the Matchup
                     </button>
                   </div>
 
@@ -457,12 +457,12 @@ export default function Home() {
                       }`}
                     >
                       {isThisMatchTheDailyLock 
-                        ? "⭐ Locked In (Click to Unlock)" 
+                        ? "Locked In" 
                         : isLocked
                           ? "Match Locked"
                           : !hasPickedThisMatch
                             ? "Pick a winner to enable Lock"
-                            : "⭐ Make this my Lock of the Day"}
+                            : "Make this my Lock of the Day"}
                     </button>
                   </div>
 
@@ -473,7 +473,7 @@ export default function Home() {
 
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-              <h2 className="text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-wide text-slate-900">🏆 Standings</h2>
+              <h2 className="text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-wide text-slate-900">Standings</h2>
               <div className="space-y-4">
                 {users.map((user, index) => (
                   <div key={user.UserID || user.id} className="flex justify-between items-center pb-3 border-b border-slate-100 last:border-0">
@@ -489,25 +489,25 @@ export default function Home() {
 
             <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm sticky top-24">
               <h2 className="text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-wide text-slate-900">
-                📝 Scoring Rules
+                Scoring Rules
               </h2>
               <div className="space-y-4 text-sm font-bold">
                 <div className="flex items-start gap-3">
-                  <span className="text-emerald-500 text-xl">✅</span>
+                  <span className="text-emerald-500 text-xl"></span>
                   <div>
                     <span className="text-slate-900 block text-base">Standard Pick (+1 Pt)</span>
                     <span className="text-slate-500 text-xs font-normal mt-1 block">Predict the correct winner or draw.</span>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 border-t border-slate-100 pt-4">
-                  <span className="text-yellow-400 text-xl">⭐</span>
+                  <span className="text-yellow-400 text-xl"></span>
                   <div>
                     <span className="text-slate-900 block text-base">Lock of the Day (+2 Pts)</span>
                     <span className="text-slate-500 text-xs font-normal mt-1 block">Double points for your most confident daily pick.</span>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 border-t border-slate-100 pt-4">
-                  <span className="text-blue-500 text-xl">🤝</span>
+                  <span className="text-blue-500 text-xl"></span>
                   <div>
                     <span className="text-slate-900 block text-base">Draws Are Tricky (+2 Pts)</span>
                     <span className="text-slate-500 text-xs font-normal mt-1 block">Because draws are harder to predict in the group stage, correct draw picks award double points!</span>
@@ -530,7 +530,7 @@ export default function Home() {
               
               <div className="bg-slate-900 p-4 flex justify-between items-center">
                 <h3 className="text-white font-black uppercase tracking-widest text-sm flex items-center gap-2">
-                  📊 Tale of the Tape
+                  Look at the Matchup
                 </h3>
                 <button 
                   onClick={() => setCompareMatch(null)}

@@ -18,6 +18,20 @@ const FLAG_MAP: Record<string, string> = {
 };
 const getFlag = (team: string) => FLAG_MAP[team] || "🏳️";
 
+const TEAM_RANKS: Record<string, number> = {
+  "Spain": 1, "France": 2, "England": 3, "Brazil": 4, "Argentina": 5,
+  "Portugal": 6, "Germany": 7, "Netherlands": 8, "Norway": 9, "Belgium": 10,
+  "Colombia": 11, "Morocco": 12, "Japan": 13, "USA": 14, "Uruguay": 15,
+  "Mexico": 16, "Croatia": 17, "Switzerland": 18, "Ecuador": 19, "Sweden": 20,
+  "Türkiye": 21, "Senegal": 22, "Austria": 23, "Paraguay": 24, "Canada": 25,
+  "Scotland": 26, "Côte d'Ivoire": 27, "Bosnia and Herzegovina": 28, "Czechia": 29, "Egypt": 30,
+  "Ghana": 31, "Algeria": 32, "Korea Republic": 33, "Australia": 34, "Tunisia": 35,
+  "IR Iran": 36, "Congo DR": 37, "South Africa": 38, "Saudi Arabia": 39, "Panama": 40,
+  "New Zealand": 41, "Qatar": 42, "Uzbekistan": 43, "Cabo Verde": 44, "Iraq": 45,
+  "Jordan": 46, "Curaçao": 47, "Haiti": 48
+};
+const getRank = (team: string) => TEAM_RANKS[team] || 99;
+
 const getMockTeamStats = (teamName: string) => {
   const seed = teamName.length + (teamName.charCodeAt(0) || 0);
   return {
@@ -399,7 +413,9 @@ export default function Home() {
                         }`}
                       >
                         <span className="text-lg sm:text-xl">{getFlag(match.home)}</span>
-                        <span className="truncate">{match.home}</span>
+                        <span className="truncate flex items-center gap-1">
+                          <span className="text-slate-400 text-xs font-black">#{getRank(match.home)}</span> {match.home}
+                        </span>
                       </button>
                       
                       <button 
@@ -427,7 +443,9 @@ export default function Home() {
                               : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-800 hover:text-blue-800'
                         }`}
                       >
-                        <span className="truncate">{match.away}</span>
+                        <span className="truncate flex items-center gap-1">
+                          {match.away} <span className="text-slate-400 text-xs font-black">#{getRank(match.away)}</span>
+                        </span>
                         <span className="text-lg sm:text-xl">{getFlag(match.away)}</span>
                       </button>
                     </div>

@@ -20,34 +20,35 @@ export default function Navbar() {
 
   const isActive = (path: string) => pathname === path;
 
+  // UPDATED: Added /picks and changed the labels
+  const navPaths = ['/', '/bracket', '/picks', '/teams', '/standings', '/stats'];
+  const navLabels = ['Group Stage', 'Knockout', 'Picks', 'Teams', 'Standings', 'Stats'];
+
   return (
-    <nav className="bg-white text-slate-800 border-b border-slate-200 shadow-sm sticky top-0 z-50">
+    <nav className="bg-white text-slate-900 border-b border-slate-200 shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           
           <div className="flex-shrink-0 font-black text-2xl tracking-tighter uppercase">
-            <Link href="/" className="text-blue-800 hover:text-blue-700 transition-colors">
-              WORLDCUP <span className="text-red-600">2026</span>
+            <Link href="/" className="text-blue-900 hover:text-blue-700 transition-colors">
+              WC <span className="text-red-600">2026</span>
             </Link>
           </div>
 
           <div className="hidden md:flex space-x-4 flex-1 justify-center h-full">
-            {['/', '/bracket', '/teams', '/standings', '/stats'].map((path, idx) => {
-              const labels = ['Picks', 'Knockout', 'Teams', 'Standings', 'Stats'];
-              return (
-                <Link 
-                  key={path}
-                  href={path} 
-                  className={`inline-flex items-center px-1 pt-1 border-b-4 font-black tracking-wide transition-all ${
-                    isActive(path) 
-                      ? 'border-red-600 text-red-600' 
-                      : 'border-transparent text-slate-500 hover:text-blue-800 hover:border-blue-300'
-                  }`}
-                >
-                  {labels[idx]}
-                </Link>
-              )
-            })}
+            {navPaths.map((path, idx) => (
+              <Link 
+                key={path}
+                href={path} 
+                className={`inline-flex items-center px-1 pt-1 border-b-4 font-black tracking-wide transition-all ${
+                  isActive(path) 
+                    ? 'border-red-600 text-red-600' 
+                    : 'border-transparent text-slate-500 hover:text-blue-800 hover:border-blue-300'
+                }`}
+              >
+                {navLabels[idx]}
+              </Link>
+            ))}
           </div>
 
           <div className="flex items-center gap-4">
@@ -73,23 +74,20 @@ export default function Navbar() {
       </div>
 
       {/* MOBILE NAVIGATION */}
-      <div className="md:hidden flex justify-around pb-2 border-t border-slate-100 pt-2 bg-white">
-        {['/', '/bracket', '/teams', '/standings', '/stats'].map((path, idx) => {
-            const labels = ['Picks', 'Knockout', 'Teams', 'Standings', 'Stats'];
-            return (
-              <Link 
-                key={path}
-                href={path} 
-                className={`px-3 py-2 rounded-lg font-black text-sm transition-all ${
-                  isActive(path) 
-                    ? 'text-red-600 bg-red-50' 
-                    : 'text-slate-500 hover:text-blue-800 hover:bg-slate-50'
-                }`}
-              >
-                {labels[idx]}
-              </Link>
-            )
-          })}
+      <div className="md:hidden flex justify-around pb-2 border-t border-slate-100 pt-2 bg-white overflow-x-auto scrollbar-hide">
+        {navPaths.map((path, idx) => (
+          <Link 
+            key={path}
+            href={path} 
+            className={`px-3 py-2 rounded-lg font-black text-sm whitespace-nowrap transition-all ${
+              isActive(path) 
+                ? 'text-red-600 bg-red-50' 
+                : 'text-slate-500 hover:text-blue-800 hover:bg-slate-50'
+            }`}
+          >
+            {navLabels[idx]}
+          </Link>
+        ))}
       </div>
     </nav>
   );

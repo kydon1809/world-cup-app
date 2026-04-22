@@ -298,7 +298,7 @@ export default function Home() {
 
             <button 
               type="submit"
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest py-4 rounded-lg mt-4 shadow-md transition-transform transform hover:-translate-y-1"
+              className="w-full bg-red-600 hover:bg-red-600 text-white font-black uppercase tracking-widest py-4 rounded-lg mt-4 shadow-md transition-transform transform hover:-translate-y-1"
             >
               {isLoginMode ? "Sign In" : "Register"}
             </button>
@@ -486,7 +486,7 @@ export default function Home() {
 
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="bg-red-600 text-white p-4">
+              <div className="bg-blue-800 text-white p-4">
                 <h2 className="text-xl font-black uppercase tracking-wide">STANDINGS</h2>
               </div>
               <div className="p-6 space-y-4">
@@ -582,7 +582,7 @@ export default function Home() {
               <div className="p-4 bg-slate-50 border-t border-slate-200 text-center">
                 <button 
                   onClick={() => setCompareMatch(null)}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors text-sm uppercase tracking-wide"
+                  className="bg-red-600 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition-colors text-sm uppercase tracking-wide"
                 >
                   CLOSE ANALYSIS
                 </button>

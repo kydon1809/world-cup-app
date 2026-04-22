@@ -2,6 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 
+// --- DICTIONARIES ---
+const TEAM_RANKS: Record<string, number> = {
+  "Spain": 1, "France": 2, "England": 3, "Brazil": 4, "Argentina": 5,
+  "Portugal": 6, "Germany": 7, "Netherlands": 8, "Norway": 9, "Belgium": 10,
+  "Colombia": 11, "Morocco": 12, "Japan": 13, "USA": 14, "Uruguay": 15,
+  "Mexico": 16, "Croatia": 17, "Switzerland": 18, "Ecuador": 19, "Sweden": 20,
+  "Türkiye": 21, "Senegal": 22, "Austria": 23, "Paraguay": 24, "Canada": 25,
+  "Scotland": 26, "Côte d'Ivoire": 27, "Bosnia and Herzegovina": 28, "Czechia": 29, "Egypt": 30,
+  "Ghana": 31, "Algeria": 32, "Korea Republic": 33, "Australia": 34, "Tunisia": 35,
+  "IR Iran": 36, "Congo DR": 37, "South Africa": 38, "Saudi Arabia": 39, "Panama": 40,
+  "New Zealand": 41, "Qatar": 42, "Uzbekistan": 43, "Cabo Verde": 44, "Iraq": 45,
+  "Jordan": 46, "Curaçao": 47, "Haiti": 48
+};
+const getRank = (team: string) => TEAM_RANKS[team] || 99;
+
 const FLAG_MAP: Record<string, string> = {
   "Mexico": "🇲🇽", "South Africa": "🇿🇦", "Korea Republic": "🇰🇷", "Czechia": "🇨🇿",
   "Canada": "🇨🇦", "Bosnia and Herzegovina": "🇧🇦", "USA": "🇺🇸", "Paraguay": "🇵🇾",
@@ -153,7 +168,7 @@ export default function BracketPage() {
     return position === 'top' ? picks[prevMatch1] || "" : picks[prevMatch2] || "";
   };
 
-  const MatchNode = ({ matchId }: { matchId: number }) => {
+  const MatchNode = ({ matchId, side }: { matchId: number, side: 'left' | 'right' | 'center' }) => {
     const topTeam = getTeam(matchId, 'top');
     const bottomTeam = getTeam(matchId, 'bottom');
     const pickedTeam = picks[matchId];
@@ -165,34 +180,56 @@ export default function BracketPage() {
       const isSelected = pickedTeam === team;
 
       if (isSelected) {
-        if (isWinner) return { bg: 'bg-yellow-400 text-yellow-900 border-yellow-500 shadow-md', text: '' }; 
+        if (isWinner) return { bg: 'bg-yellow-400 text-yellow-900 border-yellow-500 shadow-md relative', text: '' }; 
         if (isEliminated) return { bg: 'bg-slate-200 text-slate-400 border-slate-300', text: 'line-through opacity-60' }; 
-        return { bg: 'bg-blue-800 text-white border-blue-800 shadow-md', text: '' }; 
+        return { bg: 'bg-green-600 text-white border-green-700 shadow-md relative', text: '' }; 
       } else {
         if (isEliminated) return { bg: 'bg-slate-50 text-slate-400', text: 'line-through' }; 
-        return { bg: 'bg-slate-50 text-slate-700 hover:bg-slate-100', text: '' }; 
+        return { bg: 'bg-white text-slate-700 hover:bg-blue-50 hover:text-blue-900', text: '' }; 
       }
     };
 
     const topStyles = getButtonStyle(topTeam);
     const bottomStyles = getButtonStyle(bottomTeam);
 
+    const renderTeamContent = (team: string, styles: any) => {
+      if (!team) return <span className="text-slate-300 italic flex-1">TBD</span>;
+      const isSelected = styles.bg.includes('bg-red-600');
+      return (
+        <span className={`flex items-center justify-between w-full ${styles.text}`}>
+          <span className="truncate">{team}</span>
+          {TEAM_RANKS[team] && (
+            <span className={`text-[10px] ml-1 font-black ${isSelected ? 'text-red-200' : 'text-slate-400'}`}>
+              #{getRank(team)}
+            </span>
+          )}
+        </span>
+      );
+    };
+
     return (
-      <div className="flex flex-col justify-center my-2 w-32 sm:w-36 bg-white border-2 border-slate-200 rounded-md shadow-sm overflow-hidden text-sm">
-        <button onClick={() => handlePick(matchId, topTeam)} className={`p-2 text-left font-bold transition-all border-b-2 border-slate-100 truncate ${topStyles.bg}`}>
-          <span className={topStyles.text}>{topTeam || <span className="text-slate-300 italic flex-1">TBD</span>}</span>
-        </button>
-        <button onClick={() => handlePick(matchId, bottomTeam)} className={`p-2 text-left font-bold transition-all truncate ${bottomStyles.bg}`}>
-          <span className={bottomStyles.text}>{bottomTeam || <span className="text-slate-300 italic flex-1">TBD</span>}</span>
-        </button>
+      <div className="relative flex flex-col justify-center my-2 w-32 sm:w-36 text-sm group">
+        
+        {/* Connector Lines */}
+        {side === 'left' && <div className="absolute top-1/2 -right-4 sm:-right-8 w-4 sm:w-8 h-[3px] bg-slate-300 transition-colors group-hover:bg-green-600 z-0"></div>}
+        {side === 'right' && <div className="absolute top-1/2 -left-4 sm:-left-8 w-4 sm:w-8 h-[3px] bg-slate-300 transition-colors group-hover:bg-green-600 z-0"></div>}
+
+        <div className="flex flex-col bg-white border border-slate-300 rounded-md shadow-sm overflow-hidden w-full relative z-10 transition-all hover:border-green-600">
+          <button onClick={() => handlePick(matchId, topTeam)} className={`p-2 text-left font-bold transition-all border-b border-slate-200 flex items-center ${topStyles.bg}`}>
+            {renderTeamContent(topTeam, topStyles)}
+          </button>
+          <button onClick={() => handlePick(matchId, bottomTeam)} className={`p-2 text-left font-bold transition-all flex items-center ${bottomStyles.bg}`}>
+            {renderTeamContent(bottomTeam, bottomStyles)}
+          </button>
+        </div>
       </div>
     );
   };
 
-  const MatchColumn = ({ startId, count }: { startId: number, count: number }) => (
-    <div className="flex flex-col justify-around px-2 min-h-[800px]">
+  const MatchColumn = ({ startId, count, side }: { startId: number, count: number, side: 'left' | 'right' }) => (
+    <div className="flex flex-col justify-around min-h-[800px] relative z-20">
       {Array.from({ length: count }).map((_, i) => (
-        <MatchNode key={startId + i} matchId={startId + i} />
+        <MatchNode key={startId + i} matchId={startId + i} side={side} />
       ))}
     </div>
   );
@@ -202,25 +239,26 @@ export default function BracketPage() {
       <div className="max-w-[1800px] mx-auto">
         
         {/* --- SECTION 1: THE KNOCKOUT BRACKET --- */}
-        <div className="text-center mb-6">
-          <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Knockout Stage</h1>
+        <div className="text-center mb-6 border-b border-slate-200 pb-8">
+          <h1 className="text-4xl font-black text-blue-900 uppercase tracking-tighter">
+            KNOCKOUT <span className="text-red-600">STAGE</span>
+          </h1>
           <p className="text-slate-500 font-bold mt-2 mb-4">Click a team to advance them. Correct picks turn gold, eliminated teams bust.</p>
           
           <div className="flex flex-col items-center justify-center gap-4">
-            <button onClick={saveBracketToVault} disabled={isSaving} className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-8 rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95">
-              {isSaving ? "Saving..." : "💾 Save My Bracket"}
+            <button onClick={saveBracketToVault} disabled={isSaving} className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-8 rounded-xl shadow-md transition-transform transform hover:-translate-y-1">
+              {isSaving ? "SAVING..." : "SAVE MY BRACKET"}
             </button>
             
-            {/* NEW: Knockout Scoring Legend */}
             <div className="bg-white border border-slate-200 px-6 py-3 rounded-full shadow-sm text-sm font-bold text-slate-500 hidden sm:flex gap-4">
-              <span className="text-slate-900">Bracket Points:</span>
-              <span>Round of 16 <span className="text-emerald-500">+2</span></span>
+              <span className="text-blue-900 font-black">BRACKET POINTS:</span>
+              <span>Round of 16 <span className="text-green-600">+2</span></span>
               <span>•</span>
-              <span>Quarter-Finals <span className="text-emerald-500">+4</span></span>
+              <span>Quarter-Finals <span className="text-green-600">+4</span></span>
               <span>•</span>
-              <span>Semi-Finals <span className="text-emerald-500">+8</span></span>
+              <span>Semi-Finals <span className="text-green-600">+8</span></span>
               <span>•</span>
-              <span>Champion <span className="text-emerald-500">+16</span></span>
+              <span>Champion <span className="text-green-600">+16</span></span>
             </div>
           </div>
         </div>
@@ -228,17 +266,20 @@ export default function BracketPage() {
         <div className="overflow-x-auto pb-16 scrollbar-hide border-b-4 border-slate-200 mb-16">
           <div className="flex min-w-[1400px] mx-auto px-4 mt-8">
             
-            <div className="flex flex-1 justify-between pr-4 sm:pr-8">
-              <MatchColumn startId={1} count={8} />  
-              <MatchColumn startId={17} count={4} /> 
-              <MatchColumn startId={25} count={2} /> 
-              <MatchColumn startId={29} count={1} /> 
+            <div className="flex flex-1 justify-between pr-4 sm:pr-8 gap-4 sm:gap-8">
+              <MatchColumn startId={1} count={8} side="left" />  
+              <MatchColumn startId={17} count={4} side="left" /> 
+              <MatchColumn startId={25} count={2} side="left" /> 
+              <MatchColumn startId={29} count={1} side="left" /> 
             </div>
 
-            <div className="relative flex flex-col items-center justify-center w-[250px] sm:w-[300px] flex-none">
-              <div className="absolute top-4 sm:top-12 left-1/2 -translate-x-1/2 text-center flex flex-col items-center w-full">
+            {/* --- FIXED CENTER COLUMN --- */}
+            <div className="relative flex flex-col items-center justify-center w-[250px] sm:w-[300px] flex-none min-h-[800px]">
+              
+              {/* CHAMPION BOX - Absolute positioned so it doesn't affect the flex layout of the final match box */}
+              <div className="absolute top-4 sm:top-12 left-1/2 transform -translate-x-1/2 text-center flex flex-col items-center w-full">
                 <h2 className="text-xl sm:text-2xl font-black text-yellow-500 uppercase tracking-widest mb-4">Champion</h2>
-                <div className={`w-48 sm:w-64 p-4 sm:p-6 border-4 rounded-2xl shadow-xl font-black text-xl sm:text-3xl truncate flex items-center justify-center min-h-[80px] sm:min-h-[100px] transition-all
+                <div className={`w-48 sm:w-64 p-4 sm:p-6 border-4 rounded-2xl shadow-xl font-black text-xl sm:text-3xl flex flex-col items-center justify-center min-h-[80px] sm:min-h-[100px] transition-all
                   ${eliminatedTeams.includes(picks[31] || "") 
                     ? "bg-slate-200 border-slate-300 text-slate-400 line-through opacity-80" 
                     : actualWinners[31] === picks[31] && picks[31]
@@ -246,23 +287,29 @@ export default function BracketPage() {
                       : "bg-yellow-500 border-yellow-500 text-white"
                   }`}
                 >
-                  {picks[31] || "..."}
+                  <span className="truncate w-full text-center">{picks[31] || "..."}</span>
+                  {picks[31] && TEAM_RANKS[picks[31]] && (
+                     <span className="text-xs tracking-widest uppercase mt-1 opacity-80 font-bold">Rank #{getRank(picks[31])}</span>
+                  )}
                 </div>
               </div>
 
-              <div className="relative z-10 w-full flex flex-col items-center">
-                <h2 className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max text-lg sm:text-xl font-black text-slate-400 uppercase tracking-widest text-center">
+              {/* FINAL MATCH BOX - Flex centered in the 800px container to match the left/right columns */}
+              <div className="relative z-10 w-full flex flex-col items-center justify-center">
+                {/* Title floats above the box so the box itself is the true center point */}
+                <h2 className="absolute bottom-full mb-2 w-max text-lg sm:text-xl font-black text-slate-400 uppercase tracking-widest text-center">
                   Final Match
                 </h2>
-                <MatchNode matchId={31} />
+                <MatchNode matchId={31} side="center" />
               </div>
+
             </div>
 
-            <div className="flex flex-1 justify-between flex-row-reverse pl-4 sm:pl-8">
-              <MatchColumn startId={9} count={8} />   
-              <MatchColumn startId={21} count={4} />  
-              <MatchColumn startId={27} count={2} />  
-              <MatchColumn startId={30} count={1} />  
+            <div className="flex flex-1 justify-between flex-row-reverse pl-4 sm:pl-8 gap-4 sm:gap-8">
+              <MatchColumn startId={9} count={8} side="right" />   
+              <MatchColumn startId={21} count={4} side="right" />  
+              <MatchColumn startId={27} count={2} side="right" />  
+              <MatchColumn startId={30} count={1} side="right" />  
             </div>
           </div>
         </div>
@@ -270,7 +317,7 @@ export default function BracketPage() {
         {/* --- SECTION 2: THE GROUP STAGE STANDINGS --- */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Group Stage Standings</h2>
+            <h2 className="text-3xl font-black text-blue-900 uppercase tracking-tighter">GROUP STAGE STANDINGS</h2>
             <p className="text-slate-500 font-bold mt-2">Live tables for all 12 groups.</p>
           </div>
 
@@ -278,34 +325,31 @@ export default function BracketPage() {
             {groupStandings.map((group, idx) => (
               <div key={idx} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 
-                {/* TABLE HEADER */}
-                <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50">
-                  <h3 className="font-black text-lg text-slate-900 whitespace-nowrap pr-2">{group.name}</h3>
-                  <div className="flex text-xs font-bold text-slate-400 tracking-wider">
+                <div className="flex justify-between items-center p-4 bg-blue-800 text-white">
+                  <h3 className="font-black text-lg whitespace-nowrap pr-2 uppercase">{group.name}</h3>
+                  <div className="flex text-xs font-black text-blue-200 tracking-wider">
                     <span className="w-6 sm:w-8 text-center flex-shrink-0" title="Played">P</span>
                     <span className="w-6 sm:w-8 text-center flex-shrink-0" title="Wins">W</span>
                     <span className="w-6 sm:w-8 text-center flex-shrink-0" title="Draws">D</span>
                     <span className="w-6 sm:w-8 text-center flex-shrink-0" title="Losses">L</span>
                     <span className="w-8 sm:w-10 text-center flex-shrink-0" title="Goal Difference">GD</span>
-                    <span className="w-8 sm:w-10 text-center text-slate-900 flex-shrink-0" title="Points">Pts</span>
+                    <span className="w-8 sm:w-10 text-center text-white flex-shrink-0" title="Points">PTS</span>
                   </div>
                 </div>
 
-                {/* TABLE ROWS */}
                 <div className="flex flex-col">
                   {group.teams.map((team, tIdx) => (
-                    <div key={tIdx} className="relative flex justify-between items-center p-3 sm:p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                    <div key={tIdx} className="relative flex justify-between items-center p-3 sm:p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
                       
-                      {/* GREEN QUALIFICATION BAR (Top 2 teams) */}
                       {tIdx < 2 && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 rounded-r-sm"></div>
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 rounded-r-sm shadow-sm"></div>
                       )}
 
                       <div className="flex items-center space-x-2 sm:space-x-3 flex-1 pl-2 min-w-0">
                         <span className="text-slate-400 font-bold text-sm w-3 flex-shrink-0">{tIdx + 1}</span>
-                        <span className="text-lg flex-shrink-0">{FLAG_MAP[team.name] || "🏳️"}</span>
+                        <span className="text-lg flex-shrink-0">{FLAG_MAP[team.name] || ""}</span>
                         <span className="font-bold text-slate-900 tracking-wide truncate" title={team.name}>
-                          {FIFA_CODES[team.name] || team.name}
+                          {FIFA_CODES[team.name] || team.name} <span className="text-[10px] text-slate-400 ml-1">#{getRank(team.name)}</span>
                         </span>
                       </div>
 
@@ -315,7 +359,7 @@ export default function BracketPage() {
                         <span className="w-6 sm:w-8 text-center text-slate-500 flex-shrink-0">{team.draw}</span>
                         <span className="w-6 sm:w-8 text-center text-slate-500 flex-shrink-0">{team.lost}</span>
                         <span className="w-8 sm:w-10 text-center text-slate-500 flex-shrink-0">{team.gd}</span>
-                        <span className="w-8 sm:w-10 text-center text-slate-900 font-black flex-shrink-0">{team.pts}</span>
+                        <span className="w-8 sm:w-10 text-center text-blue-900 font-black flex-shrink-0">{team.pts}</span>
                       </div>
                     </div>
                   ))}
@@ -324,19 +368,18 @@ export default function BracketPage() {
             ))}
           </div>
 
-          {/* NEW: Group Stage Legend */}
           <div className="mt-10 max-w-4xl mx-auto bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center text-sm font-bold text-slate-700">
-              <span className="w-3 h-3 bg-emerald-500 rounded-sm mr-3"></span> 
+              <span className="w-3 h-3 bg-green-500 rounded-sm mr-3 shadow-sm"></span> 
               Top 2 teams qualify for Knockout Stage
             </div>
             <div className="flex flex-wrap justify-center gap-4 text-xs font-bold text-slate-400 tracking-wider uppercase">
-              <span title="Matches Played"><span className="text-slate-900">P:</span> Played</span>
-              <span title="Wins (3 Points)"><span className="text-slate-900">W:</span> Wins</span>
-              <span title="Draws (1 Point)"><span className="text-slate-900">D:</span> Draws</span>
-              <span title="Losses (0 Points)"><span className="text-slate-900">L:</span> Losses</span>
-              <span title="Goals For minus Goals Against"><span className="text-slate-900">GD:</span> Goal Difference</span>
-              <span title="Total Points"><span className="text-slate-900">Pts:</span> Points</span>
+              <span title="Matches Played"><span className="text-blue-900">P:</span> Played</span>
+              <span title="Wins (3 Points)"><span className="text-blue-900">W:</span> Wins</span>
+              <span title="Draws (1 Point)"><span className="text-blue-900">D:</span> Draws</span>
+              <span title="Losses (0 Points)"><span className="text-blue-900">L:</span> Losses</span>
+              <span title="Goals For minus Goals Against"><span className="text-blue-900">GD:</span> Goal Difference</span>
+              <span title="Total Points"><span className="text-blue-900">PTS:</span> Points</span>
             </div>
           </div>
           

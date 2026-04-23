@@ -102,6 +102,11 @@ class MatchResultInput(BaseModel):
     MatchID: str
     WinningTeam: str
 
+# NEW: Schema for Props
+class PropsUpdate(BaseModel):
+    user_id: int
+    props: dict  
+
 
 # --- API ROUTES ---
 
@@ -256,6 +261,57 @@ def save_bracket(bracket: BracketUpdate, db: Session = Depends(get_db)):
         
     db.commit()
     return {"status": "success", "message": "Bracket securely locked in the vault!"}
+
+# -- TOURNAMENT PROPS --
+
+@app.get("/api/users/{user_id}/props")
+def get_user_props(user_id: int, db: Session = Depends(get_db)):
+    try:
+        result = db.execute(
+            text("SELECT PropsJSON FROM UserProps WHERE UserID = :uid"), 
+            {"uid": user_id}
+        ).fetchone()
+        
+        if not result:
+            return {"props": {}} 
+            
+        import json
+        return {"props": json.loads(result[0])}
+    except Exception:
+        # Failsafe: If the table hasn't been created yet, just return empty
+        return {"props": {}}
+
+@app.post("/api/props")
+def save_props(props_data: PropsUpdate, db: Session = Depends(get_db)):
+    import json
+    props_string = json.dumps(props_data.props)
+    
+    # Auto-create the table if it doesn't exist yet!
+    db.execute(text("""
+        CREATE TABLE IF NOT EXISTS UserProps (
+            UserID INTEGER PRIMARY KEY,
+            PropsJSON TEXT NOT NULL
+        )
+    """))
+    
+    existing = db.execute(
+        text("SELECT UserID FROM UserProps WHERE UserID = :uid"), 
+        {"uid": props_data.user_id}
+    ).fetchone()
+    
+    if existing:
+        db.execute(
+            text("UPDATE UserProps SET PropsJSON = :props WHERE UserID = :uid"),
+            {"props": props_string, "uid": props_data.user_id}
+        )
+    else:
+        db.execute(
+            text("INSERT INTO UserProps (UserID, PropsJSON) VALUES (:uid, :props)"),
+            {"uid": props_data.user_id, "props": props_string}
+        )
+        
+    db.commit()
+    return {"status": "success", "message": "Props securely locked in the vault!"}
 
 # -- SCORING ENGINE (ADMIN) --
 @app.post("/api/admin/score")

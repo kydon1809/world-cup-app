@@ -3,54 +3,15 @@
 import React, { useState, use } from 'react';
 import Link from 'next/link';
 
-// --- MOCK DATA ---
-const MOCK_SQUAD = {
-  Goalkeepers: [
-    { name: "Franco ARMANI", number: 1 },
-    { name: "Geronimo RULLI", number: 12 },
-    { name: "Emiliano MARTINEZ", number: 23 }
-  ],
-  Defenders: [
-    { name: "Nahuel MOLINA", number: 26 },
-    { name: "Cristian ROMERO", number: 13 },
-    { name: "Nicolas OTAMENDI", number: 19 },
-    { name: "Marcos ACUNA", number: 8 }
-  ],
-  Midfielders: [
-    { name: "Rodrigo DE PAUL", number: 7 },
-    { name: "Enzo FERNANDEZ", number: 24 },
-    { name: "Alexis MAC ALLISTER", number: 20 }
-  ],
-  Forwards: [
-    { name: "Lionel MESSI", number: 10 },
-    { name: "Julian ALVAREZ", number: 9 },
-    { name: "Angel DI MARIA", number: 11 }
-  ]
-};
+// NEW: Import the data from our separated file!
+// Adjust the '../' path depending on exactly where you placed the 'data' folder
+import { TEAM_SQUADS, DEFAULT_SQUAD } from '../../../data/squads';
 
 const MOCK_STATS = {
-  matchesPlayed: 3,
-  goals: 5,
-  goalsConceded: 2,
-  cleanSheets: 1,
-  
-  attemptsAtGoal: 42,
-  attemptsOnTarget: 18,
-  assists: 4,
-  penaltiesScored: 1,
-  ownGoals: 0,
-  
-  passes: 1450,
-  passesCompleted: 1280,
-  crosses: 45,
-  crossesCompleted: 12,
-  
-  forcedTurnovers: 35,
-  corners: 15,
-  freeKicks: 22,
-  foulsAgainst: 28,
-  yellowCards: 4,
-  redCards: 0
+  matchesPlayed: 3, goals: 5, goalsConceded: 2, cleanSheets: 1,
+  attemptsAtGoal: 42, attemptsOnTarget: 18, assists: 4, penaltiesScored: 1, ownGoals: 0,
+  passes: 1450, passesCompleted: 1280, crosses: 45, crossesCompleted: 12,
+  forcedTurnovers: 35, corners: 15, freeKicks: 22, foulsAgainst: 28, yellowCards: 4, redCards: 0
 };
 
 // --- DICTIONARIES ---
@@ -98,6 +59,9 @@ export default function TeamDetailPage({ params }: { params: Promise<{ team: str
   const passCompletionPct = Math.round((MOCK_STATS.passesCompleted / MOCK_STATS.passes) * 100);
   const crossCompletionPct = Math.round((MOCK_STATS.crossesCompleted / MOCK_STATS.crosses) * 100);
 
+  // NEW: Fetch the specific squad for this team, or use the generic fallback
+  const currentSquad = TEAM_SQUADS[teamName] || DEFAULT_SQUAD;
+
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 font-sans">
       
@@ -117,7 +81,6 @@ export default function TeamDetailPage({ params }: { params: Promise<{ team: str
 
           <div className="text-6xl sm:text-7xl drop-shadow-md">{FLAG_MAP[teamName] || ""}</div>
           
-          {/* UPDATED: Aligned text container to perfectly match the left edge */}
           <div className="flex flex-col items-start">
             <h1 className="text-4xl sm:text-6xl font-black uppercase tracking-tight leading-none text-left">{teamName}</h1>
             <span className="hidden sm:block text-sm font-black text-blue-300 uppercase tracking-widest mt-2 text-left">Tournament Rank: #{getRank(teamName)}</span>
@@ -243,7 +206,8 @@ export default function TeamDetailPage({ params }: { params: Promise<{ team: str
         {/* SQUAD TAB */}
         {activeTab === 'squad' && (
           <div className="space-y-12">
-            {Object.entries(MOCK_SQUAD).map(([position, players]) => (
+            {/* NEW: Iterate over the dynamically loaded currentSquad */}
+            {Object.entries(currentSquad).map(([position, players]) => (
               <div key={position}>
                 <div className="flex items-center gap-4 mb-6">
                   <h2 className="text-2xl font-black text-blue-900 uppercase m-0">{position}</h2>
@@ -251,19 +215,17 @@ export default function TeamDetailPage({ params }: { params: Promise<{ team: str
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {players.map((player) => (
+                  {(players as Array<{name: string, number: number}>).map((player) => (
                     <div key={player.name} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col items-center relative transition-all hover:-translate-y-1 hover:border-red-600 hover:shadow-md group">
                       <div className="absolute top-3 left-3 text-2xl z-10 opacity-80 group-hover:opacity-100 transition-opacity">
                         {FLAG_MAP[teamName] || ""}
                       </div>
                       
                       <div className="w-full bg-slate-50 pt-8 pb-4 flex justify-center items-end h-48 border-b border-slate-100 relative overflow-hidden group-hover:bg-blue-50 transition-colors">
-                        {/* Abstract Player Silhouette */}
                         <svg className="w-40 h-40 text-slate-200 relative z-10 group-hover:text-blue-200 transition-colors" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                         </svg>
                         
-                        {/* Giant faded jersey number in background */}
                         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-8xl font-black text-slate-100 opacity-50 z-0 group-hover:text-white transition-colors">
                           {player.number}
                         </div>

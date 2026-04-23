@@ -225,23 +225,38 @@ def submit_pick(pick: MatchPickCreate, db: Session = Depends(get_db)):
 
 # -- BRACKETS --
 
+# -- BRACKETS --
+
 @app.get("/api/users/{user_id}/bracket")
 def get_user_bracket(user_id: int, db: Session = Depends(get_db)):
-    result = db.execute(
-        text("SELECT UserID, PicksJSON, TotalScore FROM UserBrackets WHERE UserID = :uid"), 
-        {"uid": user_id}
-    ).fetchone()
-    
-    if not result:
-        return {"picks": {}} 
+    try:
+        result = db.execute(
+            text("SELECT UserID, PicksJSON, TotalScore FROM UserBrackets WHERE UserID = :uid"), 
+            {"uid": user_id}
+        ).fetchone()
         
-    import json
-    return {"picks": json.loads(result[1])}
+        if not result:
+            return {"picks": {}} 
+            
+        import json
+        return {"picks": json.loads(result[1])}
+    except Exception:
+        # Failsafe: If the table hasn't been created yet, just return empty
+        return {"picks": {}}
 
 @app.post("/api/bracket")
 def save_bracket(bracket: BracketUpdate, db: Session = Depends(get_db)):
     import json
     picks_string = json.dumps(bracket.picks)
+    
+    # FIX: Auto-create the table if it doesn't exist yet!
+    db.execute(text("""
+        CREATE TABLE IF NOT EXISTS UserBrackets (
+            UserID INTEGER PRIMARY KEY,
+            PicksJSON TEXT NOT NULL,
+            TotalScore INTEGER DEFAULT 0
+        )
+    """))
     
     existing = db.execute(
         text("SELECT UserID FROM UserBrackets WHERE UserID = :uid"), 

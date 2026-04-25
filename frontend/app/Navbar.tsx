@@ -20,72 +20,115 @@ export default function Navbar() {
 
   const isActive = (path: string) => pathname === path;
 
-  // UPDATED: Added /picks and changed the labels
   const navPaths = ['/', '/bracket', '/picks', '/teams', '/standings', '/stats'];
   const navLabels = ['Group Stage', 'Knockout', 'Picks', 'Teams', 'Standings', 'Stats'];
 
   return (
-    <nav className="bg-white text-slate-900 border-b border-slate-200 shadow-sm sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+    <nav className="bg-[#2b2c2d] text-white sticky top-0 z-50 border-b border-[#2b2c2d] shadow-md">
+      <div className="max-w-[1400px] mx-auto">
+        <div className="flex justify-between h-14 sm:h-[60px] items-center">
           
-          <div className="flex-shrink-0 font-black text-2xl tracking-tighter uppercase">
-            <Link href="/" className="text-blue-900 hover:text-blue-700 transition-colors">
-              WC <span className="text-red-600">2026</span>
-            </Link>
-          </div>
+          {/* LEFT SIDE: Brand & Links */}
+          <div className="flex items-center h-full">
+            
+            {/* --- NEW BESPOKE BROADCAST LOGO --- */}
+            <div className="flex-shrink-0 h-full flex items-center pr-4 sm:pr-8 border-r border-slate-700/50 mr-2 sm:mr-6">
+              <Link href="/" className="flex items-center gap-3 group pl-2 sm:pl-4">
+                
+                {/* The "United" Tricolor Chevrons */}
+                <div className="flex space-x-[3px] h-6 sm:h-7 transform -skew-x-[16deg] group-hover:scale-105 transition-transform duration-300">
+                  <div className="w-2 sm:w-2.5 h-full bg-blue-700 rounded-sm shadow-sm"></div>
+                  <div className="w-2 sm:w-2.5 h-full bg-red-600 rounded-sm shadow-sm"></div>
+                  <div className="w-2 sm:w-2.5 h-full bg-emerald-500 rounded-sm shadow-sm"></div>
+                </div>
+                
+                {/* Brand Typography */}
+                <div className="flex flex-col justify-center leading-none mt-0.5">
+                  <span className="font-black text-white text-lg sm:text-xl tracking-tighter">
+                    WC<span className="text-slate-300 font-bold ml-0.5">26</span>
+                  </span>
+                  <span className="font-bold text-[8px] sm:text-[9px] text-slate-400 tracking-[0.2em] uppercase mt-0.5 group-hover:text-slate-200 transition-colors">
+                    Prediction Hub
+                  </span>
+                </div>
 
-          <div className="hidden md:flex space-x-4 flex-1 justify-center h-full">
-            {navPaths.map((path, idx) => (
-              <Link 
-                key={path}
-                href={path} 
-                className={`inline-flex items-center px-1 pt-1 border-b-4 font-black tracking-wide transition-all ${
-                  isActive(path) 
-                    ? 'border-red-600 text-red-600' 
-                    : 'border-transparent text-slate-500 hover:text-blue-800 hover:border-blue-300'
-                }`}
-              >
-                {navLabels[idx]}
               </Link>
-            ))}
+            </div>
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex h-full">
+              {navPaths.map((path, idx) => (
+                <Link 
+                  key={path}
+                  href={path} 
+                  className={`relative flex items-center px-4 lg:px-5 h-full text-[15px] font-medium transition-colors ${
+                    isActive(path) 
+                      ? 'text-white' 
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  {navLabels[idx]}
+                  
+                  {/* ESPN's Signature Active Triangle */}
+                  {isActive(path) && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-slate-50"></span>
+                  )}
+                </Link>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          {/* RIGHT SIDE: User / Utility */}
+          <div className="flex items-center h-full pr-4 sm:pr-6 gap-6">
             {currentUser ? (
-              <>
-                <span className="font-bold text-sm hidden sm:block text-slate-600">
-                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2 shadow-sm"></span>
-                  <span className="text-slate-900">{currentUser.Username}</span>
-                </span>
+              <div className="flex items-center gap-6 h-full">
+                
+                {/* User Profile Area */}
+                <div className="hidden sm:flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                  </svg>
+                  {/* WRAP THE USERNAME IN A LINK */}
+                  <Link 
+                    href={`/profile/${currentUser.UserID || currentUser.id}`} 
+                    className="text-[15px] font-medium hover:underline"
+                  >
+                    {currentUser.Username}
+                  </Link>
+                </div>
+                
+                {/* Sign Out Utility */}
                 <button 
                   onClick={handleLogout}
-                  className="text-slate-500 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors border border-transparent hover:border-red-200"
+                  className="text-[13px] font-medium text-gray-400 hover:text-white transition-colors"
                 >
-                  Switch Player
+                  Sign Out
                 </button>
-              </>
+              </div>
             ) : (
-              <span className="text-sm font-bold text-slate-500">Not logged in</span>
+              <span className="text-[13px] font-medium text-gray-400">Not logged in</span>
             )}
           </div>
           
         </div>
       </div>
 
-      {/* MOBILE NAVIGATION */}
-      <div className="md:hidden flex justify-around pb-2 border-t border-slate-100 pt-2 bg-white overflow-x-auto scrollbar-hide">
+      {/* MOBILE NAVIGATION - Horizontal Scroll */}
+      <div className="md:hidden flex overflow-x-auto scrollbar-hide bg-[#2b2c2d] px-2 shadow-inner border-t border-slate-700/50">
         {navPaths.map((path, idx) => (
           <Link 
             key={path}
             href={path} 
-            className={`px-3 py-2 rounded-lg font-black text-sm whitespace-nowrap transition-all ${
+            className={`relative px-4 py-3 text-[13px] font-medium whitespace-nowrap transition-colors ${
               isActive(path) 
-                ? 'text-red-600 bg-red-50' 
-                : 'text-slate-500 hover:text-blue-800 hover:bg-slate-50'
+                ? 'text-white' 
+                : 'text-gray-300 hover:text-white'
             }`}
           >
             {navLabels[idx]}
+            {isActive(path) && (
+               <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-b-[6px] border-l-transparent border-r-transparent border-b-slate-50"></span>
+            )}
           </Link>
         ))}
       </div>

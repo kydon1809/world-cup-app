@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 
+// --- TOURNAMENT LOCKOUT DATE ---
+// Set to June 11, 2026 (Kickoff day)
+const TOURNAMENT_START_DATE = new Date('2026-06-11T00:00:00Z');
+
 // --- MOCK PROP BETS WITH FLAGS & EXPERT CONSENSUS ---
 const PROP_BETS = [
   {
@@ -66,12 +70,18 @@ export default function PropPicksPage() {
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isTournamentLocked, setIsTournamentLocked] = useState(false);
 
   useEffect(() => {
+    // 1. Check if the tournament has started
+    if (new Date() >= TOURNAMENT_START_DATE) {
+      setIsTournamentLocked(true);
+    }
+
+    // 2. Load the user
     const savedUser = localStorage.getItem('wc_user');
     if (savedUser) {
       setCurrentUser(JSON.parse(savedUser));
-      // TODO: Fetch saved prop picks from database here when API is ready
     }
   }, []);
 
@@ -85,6 +95,12 @@ export default function PropPicksPage() {
       return;
     }
     
+    // Hardstop just in case someone tries to bypass the disabled button
+    if (isTournamentLocked) {
+      alert("The tournament has started! Picks are officially locked.");
+      return;
+    }
+    
     setIsSaving(true);
     setSaveSuccess(false);
     
@@ -95,7 +111,6 @@ export default function PropPicksPage() {
         props: picks 
       };
 
-      // Hitting your real Render API
       const res = await fetch('https://world-cup-api-bzrw.onrender.com/api/props', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,79 +132,138 @@ export default function PropPicksPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50 font-sans relative pb-12">
+      
+      {/* TOURNAMENT HOST BRANDING (USA/CAN/MEX) */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-800 via-red-600 to-emerald-600"></div>
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         
-        {/* HEADER */}
-        <div className="text-center mb-12 border-b border-slate-200 pb-8">
-          <h1 className="text-4xl font-black text-blue-900 uppercase tracking-tighter">
-            TOURNAMENT <span className="text-red-600">PROPS</span>
-          </h1>
-          <p className="mt-4 text-lg font-bold text-slate-500">
-            Review the expert consensus favorites, then make your official pick.
-          </p>
+        {/* --- ENTERPRISE HEADER WITH HOST BRANDING --- */}
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-slate-200 pb-4">
+          <div className="flex items-stretch gap-3">
+            {/* The United 2026 Color Pillar */}
+            <div className="w-1.5 rounded-full bg-gradient-to-b from-blue-800 via-red-600 to-emerald-600"></div>
+            <div>
+              <h1 className="text-2xl font-bold text-blue-950 tracking-tight leading-none pt-1 uppercase">Tournament Props</h1>
+              <p className="text-sm font-medium text-slate-500 mt-1.5 pb-1">Review expert consensus and submit your official predictions.</p>
+            </div>
+          </div>
+          
+          {/* Action Area */}
+          <div className="mt-4 md:mt-0 flex items-center">
+            <button 
+              onClick={savePropPicks} 
+              disabled={isSaving || saveSuccess || isTournamentLocked} 
+              className={`font-bold py-2.5 px-6 rounded-md text-sm transition-all shadow-sm flex items-center gap-2
+                ${isTournamentLocked 
+                  ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed' 
+                  : saveSuccess 
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-500 cursor-default' 
+                    : 'bg-blue-700 hover:bg-blue-800 text-white border border-transparent hover:shadow-md'
+                }`}
+            >
+              {isTournamentLocked 
+                ? "🔒 Props Locked" 
+                : isSaving 
+                  ? "Saving..." 
+                  : saveSuccess 
+                    ? "✓ Locked In" 
+                    : "Save Predictions"}
+            </button>
+          </div>
         </div>
 
+        {/* LOCK WARNING BANNER */}
+        {isTournamentLocked && (
+          <div className="mb-6 bg-rose-50 text-rose-700 font-bold px-4 py-3 rounded-md text-sm border border-rose-200 shadow-sm flex items-center gap-2">
+            <span>🔒</span> The tournament has commenced. Prop picks are officially locked.
+          </div>
+        )}
+
         {/* PROPS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
           {PROP_BETS.map((prop) => {
             const isSelected = !!picks[prop.id];
 
             return (
-              <div key={prop.id} className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 flex flex-col hover:border-blue-300 transition-colors">
+              <div key={prop.id} className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col transition-shadow hover:shadow-md relative overflow-hidden">
                 
-                {/* SECONDARY COLOR: Card Header */}
-                <div className="bg-blue-800 px-6 py-4 flex justify-between items-center">
-                  <div>
-                    <h2 className="text-xl font-black text-white tracking-wider uppercase">{prop.title}</h2>
-                    <p className="text-blue-200 text-xs font-bold mt-1 uppercase tracking-wide">{prop.description}</p>
+                {/* Active Selection Indicator */}
+                {isSelected && !isTournamentLocked && (
+                  <div className="absolute top-0 left-0 w-full h-[4px] bg-blue-600"></div>
+                )}
+                
+                {/* Ghost Card Header with Tinted Badge */}
+                <div className="bg-slate-50 border-b border-slate-200 px-5 py-4 flex justify-between items-start">
+                  <div className="flex flex-col gap-2.5">
+                    <div className="flex items-center">
+                      <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200 shadow-sm">
+                        {prop.title}
+                      </span>
+                    </div>
+                    <p className="text-slate-600 font-medium text-xs pr-4">{prop.description}</p>
                   </div>
-                  {/* ACCENT: Green indicator dot when selected */}
                   {isSelected && (
-                    <span className="w-3 h-3 bg-green-500 rounded-full shadow-sm border border-green-700 flex-shrink-0"></span>
+                    <span className="text-[10px] font-bold text-blue-700 uppercase tracking-widest bg-white px-2 py-1 rounded border border-slate-200 shadow-sm mt-0.5 flex-shrink-0">
+                      ✓ Selected
+                    </span>
                   )}
                 </div>
                 
-                <div className="p-6 flex-grow flex flex-col">
+                <div className="p-5 flex-grow flex flex-col bg-white">
+                  
                   {/* Consensus Favorites List */}
                   <div className="mb-6 flex-grow">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Expert Favorites</h3>
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1.5">
+                      Expert Consensus
+                    </h3>
                     <ul className="space-y-3">
                       {prop.favorites.map((fav) => (
                         <li key={fav.rank} className="flex items-center gap-3 text-sm">
-                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-slate-500 font-black text-xs shadow-sm">
+                          <span className="flex items-center justify-center w-6 h-6 rounded bg-slate-100 border border-slate-200 text-slate-500 font-bold text-[11px] tabular-nums shadow-sm">
                             {fav.rank}
                           </span>
-                          <span className="font-bold text-slate-800">{fav.name}</span>
+                          <span className="font-semibold text-slate-800">{fav.name}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
                   
                   {/* Selection Dropdown */}
-                  <div className="mt-auto pt-5 border-t border-slate-100">
-                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
+                  <div className="mt-auto pt-4 border-t border-slate-100">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5">
                       Your Official Pick
                     </label>
                     <div className="relative">
                       <select 
                         value={picks[prop.id] || ""}
                         onChange={(e) => handleSelection(prop.id, e.target.value)}
-                        className={`w-full appearance-none bg-slate-50 border-2 text-slate-900 font-black rounded-lg px-4 py-3 pr-10 focus:outline-none focus:ring-0 transition-colors cursor-pointer shadow-sm
-                          ${isSelected 
-                            ? 'border-green-500 bg-green-50 focus:border-green-600' // ACCENT
-                            : 'border-slate-200 focus:border-red-600' // PRIMARY
-                          }`}
+                        disabled={isTournamentLocked}
+                        className={`w-full appearance-none rounded-md px-4 py-3 pr-10 text-sm outline-none transition-all duration-200
+                          ${isTournamentLocked 
+                            ? 'bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed opacity-80 font-semibold' 
+                            : isSelected
+                              ? 'bg-blue-50/50 border border-blue-600 text-blue-900 font-bold ring-2 ring-blue-600/30 shadow-sm'
+                              : 'bg-white border border-slate-300 text-slate-700 font-semibold hover:border-blue-400 hover:shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                          }
+                        `}
                       >
-                        <option value="" disabled>Select your pick...</option>
+                        <option value="" disabled>Select your prediction...</option>
                         {prop.options.map(opt => (
                           <option key={opt} value={opt}>{opt}</option>
                         ))}
                       </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
-                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                        </svg>
+                      
+                      {/* Custom Select Chevron or Lock Icon */}
+                      <div className={`pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 ${isTournamentLocked ? 'text-slate-300' : 'text-slate-400'}`}>
+                        {isTournamentLocked ? (
+                           <span className="text-sm">🔒</span>
+                        ) : (
+                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                          </svg>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -198,21 +272,6 @@ export default function PropPicksPage() {
               </div>
             );
           })}
-        </div>
-
-        {/* SAVE BUTTON */}
-        <div className="mt-12 text-center pb-12">
-          <button 
-            onClick={savePropPicks} 
-            disabled={isSaving || saveSuccess} 
-            className={`font-black py-4 px-12 rounded-xl shadow-md transition-all transform hover:-translate-y-1 uppercase tracking-widest text-white border-2
-              ${saveSuccess 
-                ? 'bg-green-500 border-green-600 hover:transform-none cursor-default' 
-                : 'bg-red-600 border-red-700 hover:bg-red-700'
-              }`}
-          >
-            {isSaving ? "LOCKING IN..." : saveSuccess ? "PICKS LOCKED IN ✓" : "LOCK IN MY PICKS"}
-          </button>
         </div>
 
       </div>

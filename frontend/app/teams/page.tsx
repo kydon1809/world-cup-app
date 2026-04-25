@@ -48,42 +48,82 @@ const FIFA_CODES: Record<string, string> = {
   "England": "ENG", "Croatia": "CRO", "Ghana": "GHA", "Panama": "PAN"
 };
 
+const getRankColor = (rank: number) => {
+  if (rank === 1) return 'text-amber-500 font-bold'; // Gold
+  if (rank === 2) return 'text-slate-400 font-bold'; // Silver
+  if (rank === 3) return 'text-amber-700 font-bold'; // Bronze
+  return 'text-slate-400 font-semibold';
+};
+
 export default function TeamsHubPage() {
-  // CHANGED: Sort teams by their FanDuel Rank instead of alphabetically!
   const allTeams = Object.keys(FIFA_CODES).sort((a, b) => getRank(a) - getRank(b));
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 p-4 sm:p-8 font-sans">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50 font-sans relative pb-12">
+      
+      {/* TOURNAMENT HOST BRANDING (USA/CAN/MEX) */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-800 via-red-600 to-emerald-600"></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         
-        <div className="text-center mb-12 border-b border-slate-200 pb-8">
-          <h1 className="text-4xl font-black text-blue-900 uppercase tracking-tighter">
-            THE <span className="text-red-600">TEAMS</span>
-          </h1>
-          <p className="text-slate-500 font-bold mt-2">
-            All 48 nations competing in North America. Ranked by live FanDuel odds.
-          </p>
+        {/* --- ENTERPRISE HEADER WITH HOST BRANDING --- */}
+        <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-slate-200 pb-4">
+          <div className="flex items-stretch gap-3">
+            {/* The United 2026 Color Pillar */}
+            <div className="w-1.5 rounded-full bg-gradient-to-b from-blue-800 via-red-600 to-emerald-600"></div>
+            <div>
+              <h1 className="text-2xl font-bold text-blue-950 tracking-tight leading-none pt-1 uppercase">Tournament Teams</h1>
+              <p className="text-sm font-medium text-slate-500 mt-1.5 pb-1">All 48 competing nations, ranked by current tournament odds.</p>
+            </div>
+          </div>
+          
+          {/* Favorites Legend (Tinted Badge Style) */}
+          <div className="mt-4 md:mt-0 flex items-center bg-white border border-slate-200 rounded-md shadow-sm p-1.5 pr-4 text-[11px] font-bold uppercase tracking-widest">
+            <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded border border-blue-200 shadow-sm mr-4">
+              Favorites Legend
+            </span>
+            <span className="text-amber-500 mr-3">1st</span>
+            <span className="text-slate-400 mr-3">2nd</span>
+            <span className="text-amber-700">3rd</span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
-          {allTeams.map((team) => (
-            <Link 
-              href={`/teams/${encodeURIComponent(team)}`} 
-              key={team}
-              className="relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-red-600 transition-all p-6 flex flex-col items-center justify-center text-center group cursor-pointer"
-            >
-              {/* RANK BADGE */}
-              <div className="absolute top-2 right-3 text-xs font-black text-slate-300 group-hover:text-red-600 transition-colors uppercase tracking-widest">
-                #{getRank(team)}
-              </div>
+        {/* --- DATA TILES GRID --- */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-5">
+          {allTeams.map((team) => {
+            const rank = getRank(team);
+            
+            return (
+              <Link 
+                href={`/teams/${encodeURIComponent(team)}`} 
+                key={team}
+                className="relative bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all duration-200 p-4 sm:p-5 flex flex-col items-center justify-center text-center group overflow-hidden"
+              >
+                {/* Subtle Hover Interaction Bar */}
+                <div className="absolute top-0 left-0 w-full h-[3px] bg-blue-600 transform -translate-y-full group-hover:translate-y-0 transition-transform duration-200 ease-in-out"></div>
 
-              <div className="text-5xl sm:text-6xl mb-4 group-hover:scale-110 transition-transform">
-                {FLAG_MAP[team]}
-              </div>
-              <h2 className="font-black text-slate-900 leading-tight mb-1 group-hover:text-blue-900 transition-colors">{team}</h2>
-              <p className="text-sm font-bold text-slate-400 tracking-widest">({FIFA_CODES[team]})</p>
-            </Link>
-          ))}
+                {/* RANK BADGE */}
+                <div className="absolute top-2 left-2.5 w-full flex justify-start">
+                  <span className={`text-[10px] uppercase tracking-widest ${getRankColor(rank)}`}>
+                    #{rank}
+                  </span>
+                </div>
+
+                {/* FLAG ICON */}
+                <div className="text-4xl sm:text-5xl mb-2.5 mt-3 rounded-full ring-1 ring-slate-200 overflow-hidden leading-none inline-block bg-white shadow-sm transition-transform duration-200 group-hover:scale-[1.02]">
+                  {FLAG_MAP[team]}
+                </div>
+                
+                {/* TEAM INFO */}
+                <h2 className="font-bold text-slate-800 text-sm leading-tight mb-0.5 group-hover:text-blue-700 transition-colors">
+                  {team}
+                </h2>
+                <p className="text-[10px] font-medium text-slate-400 tracking-widest uppercase">
+                  {FIFA_CODES[team]}
+                </p>
+              </Link>
+            )
+          })}
         </div>
 
       </div>

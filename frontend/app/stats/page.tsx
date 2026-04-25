@@ -30,7 +30,7 @@ const FLAG_MAP: Record<string, string> = {
   "Argentina": "🇦🇷", "Algeria": "🇩🇿", "Austria": "🇦🇹", "Jordan": "🇯🇴",
   "Ghana": "🇬🇭", "Panama": "🇵🇦", "England": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "Croatia": "🇭🇷",
   "Portugal": "🇵🇹", "Congo DR": "🇨🇩", "Uzbekistan": "🇺🇿", "Colombia": "🇨🇴",
-  "Poland": "🇵🇱" // Added Poland specifically for the 2022 mockup data
+  "Poland": "🇵🇱" 
 };
 
 // --- MOCK DATA: 2022 WORLD CUP STATS ---
@@ -73,66 +73,81 @@ const teamStats = [
 
 export default function StatsPage() {
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 text-slate-900 font-sans p-4 sm:p-8">
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50 text-slate-900 font-sans relative pb-12">
       
-      <main className="max-w-7xl mx-auto py-6">
+      {/* TOURNAMENT HOST BRANDING (USA/CAN/MEX) */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-800 via-red-600 to-emerald-600"></div>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         
-        {/* NEW HEADER STYLE */}
-        <div className="mb-10 text-center border-b border-slate-200 pb-8">
-          <h1 className="text-4xl font-black text-blue-900 uppercase tracking-tighter">
-            TOURNAMENT <span className="text-red-600">STATS</span>
-          </h1>
-          <p className="text-slate-500 font-bold mt-2">Historical Mockup: 2022 Leaders</p>
+        {/* --- ENTERPRISE HEADER WITH HOST BRANDING --- */}
+        <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-slate-200 pb-4">
+          <div className="flex items-stretch gap-3">
+            {/* The United 2026 Color Pillar */}
+            <div className="w-1.5 rounded-full bg-gradient-to-b from-blue-800 via-red-600 to-emerald-600"></div>
+            <div>
+              <h1 className="text-2xl font-bold text-blue-950 tracking-tight leading-none pt-1 uppercase">Tournament Stats</h1>
+              <p className="text-sm font-medium text-slate-500 mt-1.5 pb-1">Historical Leaders (2022 Mockup Data).</p>
+            </div>
+          </div>
         </div>
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
 
           {/* COLUMN 1: Attacking */}
-          <div className="space-y-8">
-            <h2 className="text-xl font-black text-blue-900 uppercase border-b-2 border-red-600 pb-2">
+          <div className="space-y-6">
+            <h2 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-200 pb-2">
               Attacking Leaders
             </h2>
             
             {/* Goals Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-blue-800 text-white p-3">
-                <h3 className="text-sm font-black uppercase tracking-widest text-center">Golden Boot (Goals)</h3>
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center">
+                <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200">
+                  Golden Boot (Goals)
+                </span>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="flex flex-col bg-white">
                 {attackingStats.goals.map((player, idx) => (
-                  <div key={idx} className="flex justify-between items-center border-b border-slate-100 last:border-0 pb-3 last:pb-0 hover:bg-slate-50 transition-colors px-2 rounded">
-                    <div>
-                      <p className="font-black text-slate-900">{player.name}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-sm">{FLAG_MAP[player.team] || ""}</span>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{player.team}</p>
-                        {TEAM_RANKS[player.team] && <span className="text-[9px] text-slate-400 font-black tracking-widest ml-1">#{getRank(player.team)}</span>}
+                  <div key={idx} className="flex justify-between items-center px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-slate-400 w-3 text-right">{idx + 1}</span>
+                      <div>
+                        <p className="font-semibold text-slate-800 text-sm leading-tight">{player.name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-sm leading-none rounded-full ring-1 ring-slate-200 overflow-hidden inline-block bg-white shadow-sm">{FLAG_MAP[player.team] || ""}</span>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{player.team}</p>
+                        </div>
                       </div>
                     </div>
-                    <span className="text-xl font-black text-white bg-green-500 px-3 py-1 rounded-md shadow-sm">{player.value}</span>
+                    <span className="text-xl font-bold text-emerald-600 tabular-nums">{player.value}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Assists Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-blue-800 text-white p-3">
-                <h3 className="text-sm font-black uppercase tracking-widest text-center">Top Playmakers (Assists)</h3>
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center">
+                <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200">
+                  Top Playmakers (Assists)
+                </span>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="flex flex-col bg-white">
                 {attackingStats.assists.map((player, idx) => (
-                  <div key={idx} className="flex justify-between items-center border-b border-slate-100 last:border-0 pb-3 last:pb-0 hover:bg-slate-50 transition-colors px-2 rounded">
-                    <div>
-                      <p className="font-black text-slate-900">{player.name}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-sm">{FLAG_MAP[player.team] || ""}</span>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{player.team}</p>
-                        {TEAM_RANKS[player.team] && <span className="text-[9px] text-slate-400 font-black tracking-widest ml-1">#{getRank(player.team)}</span>}
+                  <div key={idx} className="flex justify-between items-center px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-slate-400 w-3 text-right">{idx + 1}</span>
+                      <div>
+                        <p className="font-semibold text-slate-800 text-sm leading-tight">{player.name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-sm leading-none rounded-full ring-1 ring-slate-200 overflow-hidden inline-block bg-white shadow-sm">{FLAG_MAP[player.team] || ""}</span>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{player.team}</p>
+                        </div>
                       </div>
                     </div>
-                    <span className="text-xl font-black text-white bg-green-500 px-3 py-1 rounded-md shadow-sm">{player.value}</span>
+                    <span className="text-xl font-bold text-emerald-600 tabular-nums">{player.value}</span>
                   </div>
                 ))}
               </div>
@@ -140,50 +155,58 @@ export default function StatsPage() {
           </div>
 
           {/* COLUMN 2: Defensive */}
-          <div className="space-y-8">
-            <h2 className="text-xl font-black text-blue-900 uppercase border-b-2 border-red-600 pb-2">
+          <div className="space-y-6">
+            <h2 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-200 pb-2">
               Defensive Anchors
             </h2>
 
             {/* Tackles Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-blue-800 text-white p-3">
-                <h3 className="text-sm font-black uppercase tracking-widest text-center">Midfield Enforcers (Tackles)</h3>
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center">
+                <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200">
+                  Midfield Enforcers (Tackles)
+                </span>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="flex flex-col bg-white">
                 {defensiveStats.tackles.map((player, idx) => (
-                  <div key={idx} className="flex justify-between items-center border-b border-slate-100 last:border-0 pb-3 last:pb-0 hover:bg-slate-50 transition-colors px-2 rounded">
-                    <div>
-                      <p className="font-black text-slate-900">{player.name}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-sm">{FLAG_MAP[player.team] || ""}</span>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{player.team}</p>
-                        {TEAM_RANKS[player.team] && <span className="text-[9px] text-slate-400 font-black tracking-widest ml-1">#{getRank(player.team)}</span>}
+                  <div key={idx} className="flex justify-between items-center px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-slate-400 w-3 text-right">{idx + 1}</span>
+                      <div>
+                        <p className="font-semibold text-slate-800 text-sm leading-tight">{player.name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-sm leading-none rounded-full ring-1 ring-slate-200 overflow-hidden inline-block bg-white shadow-sm">{FLAG_MAP[player.team] || ""}</span>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{player.team}</p>
+                        </div>
                       </div>
                     </div>
-                    <span className="text-xl font-black text-white bg-green-500 px-3 py-1 rounded-md shadow-sm">{player.value}</span>
+                    <span className="text-xl font-bold text-slate-700 tabular-nums">{player.value}</span>
                   </div>
                 ))}
               </div>
             </div>
             
             {/* Saves Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-               <div className="bg-blue-800 text-white p-3">
-                <h3 className="text-sm font-black uppercase tracking-widest text-center">Shot Stoppers (Saves)</h3>
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+               <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center">
+                <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200">
+                  Shot Stoppers (Saves)
+                </span>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="flex flex-col bg-white">
                 {defensiveStats.saves.map((player, idx) => (
-                  <div key={idx} className="flex justify-between items-center border-b border-slate-100 last:border-0 pb-3 last:pb-0 hover:bg-slate-50 transition-colors px-2 rounded">
-                    <div>
-                      <p className="font-black text-slate-900">{player.name}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-sm">{FLAG_MAP[player.team] || ""}</span>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{player.team}</p>
-                        {TEAM_RANKS[player.team] && <span className="text-[9px] text-slate-400 font-black tracking-widest ml-1">#{getRank(player.team)}</span>}
+                  <div key={idx} className="flex justify-between items-center px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-slate-400 w-3 text-right">{idx + 1}</span>
+                      <div>
+                        <p className="font-semibold text-slate-800 text-sm leading-tight">{player.name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-sm leading-none rounded-full ring-1 ring-slate-200 overflow-hidden inline-block bg-white shadow-sm">{FLAG_MAP[player.team] || ""}</span>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{player.team}</p>
+                        </div>
                       </div>
                     </div>
-                    <span className="text-xl font-black text-white bg-green-500 px-3 py-1 rounded-md shadow-sm">{player.value}</span>
+                    <span className="text-xl font-bold text-blue-700 tabular-nums">{player.value}</span>
                   </div>
                 ))}
               </div>
@@ -191,40 +214,40 @@ export default function StatsPage() {
           </div>
 
           {/* COLUMN 3: Team Dynamics */}
-          <div className="space-y-8">
-            <h2 className="text-xl font-black text-blue-900 uppercase border-b-2 border-red-600 pb-2">
+          <div className="space-y-6">
+            <h2 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-200 pb-2">
               Team Dynamics
             </h2>
             
             {/* Possession Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden h-fit">
-              <div className="bg-blue-800 text-white p-3">
-                <h3 className="text-sm font-black uppercase tracking-widest text-center">Possession Dominance</h3>
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden h-fit hover:shadow-md transition-shadow">
+              <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center">
+                <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200">
+                  Possession Dominance
+                </span>
               </div>
               
-              <div className="p-6">
-                {/* Table Header */}
-                <div className="flex justify-between text-xs font-black text-slate-400 border-b border-slate-200 pb-3 mb-4 uppercase tracking-widest">
-                  <span className="w-1/2">TEAM</span>
-                  <span className="w-1/4 text-center">POSS</span>
-                  <span className="w-1/4 text-right">PASS</span>
+              <div className="flex flex-col bg-white">
+                {/* Secondary Table Ghost Header */}
+                <div className="flex bg-slate-50 border-b border-slate-100 px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <div className="w-1/2 pl-2">Team</div>
+                  <div className="w-1/4 text-center">Poss</div>
+                  <div className="w-1/4 text-right pr-2">Pass</div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="flex flex-col tabular-nums text-sm">
                   {teamStats.map((stat, idx) => (
-                    <div key={idx} className="flex justify-between items-center border-b border-slate-100 last:border-0 pb-3 last:pb-0 hover:bg-slate-50 transition-colors rounded px-1">
-                      <div className="w-1/2 flex flex-col">
-                        <span className="font-black text-slate-900 truncate">{stat.team}</span>
-                        <div className="flex items-center gap-1">
-                           <span className="text-[10px]">{FLAG_MAP[stat.team] || ""}</span>
-                           {TEAM_RANKS[stat.team] && <span className="text-[9px] text-slate-400 font-black tracking-widest uppercase">#{getRank(stat.team)}</span>}
-                        </div>
+                    <div key={idx} className="flex justify-between items-center px-4 py-2.5 border-b border-slate-100 last:border-0 hover:bg-gray-50 transition-colors">
+                      <div className="w-1/2 flex items-center gap-2.5 min-w-0">
+                        <span className="text-xs font-semibold text-slate-400 w-3 text-right">{idx + 1}</span>
+                        <span className="text-base leading-none rounded-full ring-1 ring-slate-200 overflow-hidden inline-block bg-white flex-shrink-0 shadow-sm">{FLAG_MAP[stat.team] || ""}</span>
+                        <span className="font-semibold text-slate-800 truncate">{stat.team}</span>
                       </div>
                       <div className="w-1/4 flex justify-center">
-                        <span className="font-black text-white bg-slate-400 px-2 py-1 rounded-md shadow-sm text-sm">{stat.possession}</span>
+                        <span className="font-medium text-slate-600">{stat.possession}</span>
                       </div>
-                      <div className="w-1/4 flex justify-end">
-                        <span className="font-black text-white bg-slate-400 px-2 py-1 rounded-md shadow-sm text-sm">{stat.passAccuracy}</span>
+                      <div className="w-1/4 flex justify-end pr-2">
+                        <span className="font-medium text-slate-600">{stat.passAccuracy}</span>
                       </div>
                     </div>
                   ))}

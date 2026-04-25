@@ -2,9 +2,6 @@
 
 import React, { useState, use } from 'react';
 import Link from 'next/link';
-
-// NEW: Import the data from our separated file!
-// Adjust the '../' path depending on exactly where you placed the 'data' folder
 import { TEAM_SQUADS, DEFAULT_SQUAD } from '../../../data/squads';
 
 const MOCK_STATS = {
@@ -44,10 +41,11 @@ const FLAG_MAP: Record<string, string> = {
   "Portugal": "🇵🇹", "Congo DR": "🇨🇩", "Uzbekistan": "🇺🇿", "Colombia": "🇨🇴"
 };
 
-const StatRow = ({ label, value }: { label: string, value: number | string }) => (
-  <div className="flex justify-between items-center py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors px-2 rounded">
-    <span className="font-bold text-slate-500 uppercase tracking-wide text-xs">{label}</span>
-    <span className="font-black text-slate-900 text-lg">{value}</span>
+// Refined Enterprise StatRow (Using neutral gray hover)
+const StatRow = ({ label, value, valueColor = "text-slate-900" }: { label: string, value: number | string, valueColor?: string }) => (
+  <div className="flex justify-between items-center py-3 border-b border-slate-100 last:border-0 hover:bg-gray-50 transition-colors px-5 tabular-nums text-sm">
+    <span className="font-medium text-slate-600">{label}</span>
+    <span className={`font-semibold ${valueColor}`}>{value}</span>
   </div>
 );
 
@@ -59,190 +57,222 @@ export default function TeamDetailPage({ params }: { params: Promise<{ team: str
   const passCompletionPct = Math.round((MOCK_STATS.passesCompleted / MOCK_STATS.passes) * 100);
   const crossCompletionPct = Math.round((MOCK_STATS.crossesCompleted / MOCK_STATS.crosses) * 100);
 
-  // NEW: Fetch the specific squad for this team, or use the generic fallback
   const currentSquad = TEAM_SQUADS[teamName] || DEFAULT_SQUAD;
+  const teamRank = getRank(teamName);
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 font-sans">
       
-      {/* HEADER BANNER */}
-      <div className="bg-blue-800 text-white pt-10 pb-6 px-4 border-b-4 border-red-600 shadow-sm relative">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-          <div className="w-full flex justify-between items-center sm:hidden mb-2">
-            <Link href="/teams" className="text-blue-200 hover:text-white transition-colors text-sm font-black uppercase tracking-widest">
-              &larr; Back
-            </Link>
-            <span className="text-sm font-black text-blue-300 uppercase tracking-widest">Rank #{getRank(teamName)}</span>
-          </div>
+      {/* ENTERPRISE HEADER BANNER (ESPN Charcoal Style) */}
+      <div className="bg-[#2b2c2d] text-white pt-8 pb-0 px-4 border-b border-slate-800 shadow-sm relative">
+        
+        {/* TOURNAMENT HOST BRANDING (USA/CAN/MEX) - Top edge of the dark header */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-red-500 to-emerald-500 z-10"></div>
 
-          <Link href="/teams" className="hidden sm:block absolute top-4 left-4 xl:left-auto text-blue-200 hover:text-white transition-colors text-sm font-black uppercase tracking-widest">
+        <div className="max-w-7xl mx-auto relative z-20">
+          
+          {/* Breadcrumb Navigation */}
+          <Link href="/teams" className="inline-flex items-center text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors mb-4">
             &larr; Back to Teams
           </Link>
 
-          <div className="text-6xl sm:text-7xl drop-shadow-md">{FLAG_MAP[teamName] || ""}</div>
-          
-          <div className="flex flex-col items-start">
-            <h1 className="text-4xl sm:text-6xl font-black uppercase tracking-tight leading-none text-left">{teamName}</h1>
-            <span className="hidden sm:block text-sm font-black text-blue-300 uppercase tracking-widest mt-2 text-left">Tournament Rank: #{getRank(teamName)}</span>
+          {/* Team Identity Block */}
+          <div className="flex items-end gap-5 pb-6">
+            <div className="text-6xl sm:text-7xl leading-none rounded-sm bg-white p-1 shadow-md">
+              {FLAG_MAP[teamName] || ""}
+            </div>
+            
+            <div className="flex flex-col items-start pb-1">
+              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight leading-none mb-1.5">{teamName}</h1>
+              <div className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest">
+                <span className="text-slate-400">Tournament Rank:</span>
+                <span className={teamRank <= 3 ? (teamRank === 1 ? 'text-amber-400' : teamRank === 2 ? 'text-slate-300' : 'text-amber-600') : 'text-white'}>
+                  #{teamRank}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* TABS */}
-      <div className="bg-white border-b border-slate-200 sticky top-16 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 flex space-x-8">
-          <button 
-            onClick={() => setActiveTab('squad')}
-            className={`py-4 font-black uppercase tracking-widest text-sm transition-all border-b-4 ${
-              activeTab === 'squad' 
-                ? 'border-red-600 text-red-600' 
-                : 'border-transparent text-slate-500 hover:text-blue-800 hover:border-blue-300'
-            }`}
-          >
-            Squad
-          </button>
-          <button 
-            onClick={() => setActiveTab('stats')}
-            className={`py-4 font-black uppercase tracking-widest text-sm transition-all border-b-4 ${
-              activeTab === 'stats' 
-                ? 'border-red-600 text-red-600' 
-                : 'border-transparent text-slate-500 hover:text-blue-800 hover:border-blue-300'
-            }`}
-          >
-            Tournament Stats
-          </button>
+          {/* Broadcast Tabs */}
+          <div className="flex space-x-8">
+            <button 
+              onClick={() => setActiveTab('squad')}
+              className={`py-3 text-[13px] font-semibold uppercase tracking-wider transition-colors relative ${
+                activeTab === 'squad' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Squad
+              {activeTab === 'squad' && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-slate-50"></span>
+              )}
+            </button>
+            <button 
+              onClick={() => setActiveTab('stats')}
+              className={`py-3 text-[13px] font-semibold uppercase tracking-wider transition-colors relative ${
+                activeTab === 'stats' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Tournament Stats
+              {activeTab === 'stats' && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-slate-50"></span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* CONTENT */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         
-        {/* STATS TAB */}
-        {activeTab === 'stats' && (
-          <div className="space-y-6">
-            
-            {/* Top Level Overview */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:border-blue-300 transition-colors">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Matches Played</p>
-                <p className="text-4xl font-black text-slate-900">{MOCK_STATS.matchesPlayed}</p>
-              </div>
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:border-green-300 transition-colors">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Goals Scored</p>
-                <p className="text-4xl font-black text-green-600">{MOCK_STATS.goals}</p>
-              </div>
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:border-red-300 transition-colors">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Goals Conceded</p>
-                <p className="text-4xl font-black text-red-600">{MOCK_STATS.goalsConceded}</p>
-              </div>
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:border-blue-300 transition-colors">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Clean Sheets</p>
-                <p className="text-4xl font-black text-blue-800">{MOCK_STATS.cleanSheets}</p>
-              </div>
-            </div>
-
-            {/* Detailed Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                <h3 className="text-lg font-black text-blue-900 uppercase border-b-2 border-red-600 pb-3 mb-3 inline-block">Attacking</h3>
-                <StatRow label="Attempts at Goal" value={MOCK_STATS.attemptsAtGoal} />
-                <StatRow label="Attempts on Target" value={MOCK_STATS.attemptsOnTarget} />
-                <StatRow label="Assists" value={MOCK_STATS.assists} />
-                <StatRow label="Corners" value={MOCK_STATS.corners} />
-                <StatRow label="Penalties Scored" value={MOCK_STATS.penaltiesScored} />
-                <StatRow label="Own Goals (For)" value={MOCK_STATS.ownGoals} />
-              </div>
-
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                <h3 className="text-lg font-black text-blue-900 uppercase border-b-2 border-red-600 pb-3 mb-4 inline-block">Passing</h3>
-                
-                <div className="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-100">
-                  <div className="flex justify-between items-end mb-2">
-                    <span className="font-bold text-slate-500 uppercase tracking-wide text-xs">Passes Completed</span>
-                    <span className="font-black text-slate-900">{MOCK_STATS.passesCompleted} / {MOCK_STATS.passes}</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2.5">
-                    <div className="bg-blue-800 h-2.5 rounded-full" style={{ width: `${passCompletionPct}%` }}></div>
-                  </div>
-                  <p className="text-right text-xs font-bold text-blue-800 mt-2">{passCompletionPct}% Accuracy</p>
-                </div>
-
-                <div className="mb-4 bg-slate-50 p-4 rounded-lg border border-slate-100">
-                  <div className="flex justify-between items-end mb-2">
-                    <span className="font-bold text-slate-500 uppercase tracking-wide text-xs">Crosses Completed</span>
-                    <span className="font-black text-slate-900">{MOCK_STATS.crossesCompleted} / {MOCK_STATS.crosses}</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2.5">
-                    <div className="bg-green-600 h-2.5 rounded-full" style={{ width: `${crossCompletionPct}%` }}></div>
-                  </div>
-                  <p className="text-right text-xs font-bold text-green-700 mt-2">{crossCompletionPct}% Accuracy</p>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                <h3 className="text-lg font-black text-blue-900 uppercase border-b-2 border-red-600 pb-3 mb-3 inline-block">Defense & Discipline</h3>
-                <StatRow label="Forced Turnovers" value={MOCK_STATS.forcedTurnovers} />
-                <StatRow label="Fouls Against" value={MOCK_STATS.foulsAgainst} />
-                <StatRow label="Free Kicks Won" value={MOCK_STATS.freeKicks} />
-                <div className="flex justify-between items-center py-3 border-b border-slate-100 px-2 hover:bg-slate-50 transition-colors rounded">
-                  <span className="font-bold text-slate-500 uppercase tracking-wide text-xs flex items-center gap-2">
-                    <span className="w-3 h-4 bg-yellow-400 rounded-sm shadow-sm border border-yellow-500"></span> Yellow Cards
-                  </span>
-                  <span className="font-black text-slate-900 text-lg">{MOCK_STATS.yellowCards}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-2 hover:bg-slate-50 transition-colors rounded">
-                  <span className="font-bold text-slate-500 uppercase tracking-wide text-xs flex items-center gap-2">
-                    <span className="w-3 h-4 bg-red-600 rounded-sm shadow-sm border border-red-700"></span> Red Cards
-                  </span>
-                  <span className="font-black text-slate-900 text-lg">{MOCK_STATS.redCards}</span>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
-
         {/* SQUAD TAB */}
         {activeTab === 'squad' && (
-          <div className="space-y-12">
-            {/* NEW: Iterate over the dynamically loaded currentSquad */}
+          <div className="space-y-8">
             {Object.entries(currentSquad).map(([position, players]) => (
-              <div key={position}>
-                <div className="flex items-center gap-4 mb-6">
-                  <h2 className="text-2xl font-black text-blue-900 uppercase m-0">{position}</h2>
-                  <div className="h-1 flex-grow bg-slate-100 rounded"></div>
+              <div key={position} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+                
+                {/* Badge Header for Position */}
+                <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center">
+                  <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200 shadow-sm">
+                    {position}
+                  </span>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {(players as Array<{name: string, number: number}>).map((player) => (
-                    <div key={player.name} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col items-center relative transition-all hover:-translate-y-1 hover:border-red-600 hover:shadow-md group">
-                      <div className="absolute top-3 left-3 text-2xl z-10 opacity-80 group-hover:opacity-100 transition-opacity">
-                        {FLAG_MAP[teamName] || ""}
+                {/* Sleek Data Tiles Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0 bg-white">
+                  {(players as Array<{name: string, number: number}>).map((player, index) => (
+                    <div 
+                      key={player.name} 
+                      className={`flex items-center p-3 sm:p-4 hover:bg-gray-50 transition-colors border-slate-100 ${
+                        index !== 0 ? 'border-t sm:border-t-0' : '' 
+                      } border-b sm:border-b-0 sm:border-r`}
+                    >
+                      {/* Number Block */}
+                      <div className="w-10 h-10 rounded bg-slate-100 border border-slate-200 text-slate-500 flex items-center justify-center font-bold text-lg mr-3 shadow-sm tabular-nums flex-shrink-0">
+                        {player.number}
                       </div>
                       
-                      <div className="w-full bg-slate-50 pt-8 pb-4 flex justify-center items-end h-48 border-b border-slate-100 relative overflow-hidden group-hover:bg-blue-50 transition-colors">
-                        <svg className="w-40 h-40 text-slate-200 relative z-10 group-hover:text-blue-200 transition-colors" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                        </svg>
-                        
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-8xl font-black text-slate-100 opacity-50 z-0 group-hover:text-white transition-colors">
-                          {player.number}
-                        </div>
-                      </div>
-                      
-                      <div className="p-5 text-center w-full relative z-10 bg-white">
-                        <h3 className="font-black text-lg text-slate-900 leading-tight mb-1 group-hover:text-blue-900 transition-colors">{player.name}</h3>
-                        <div className="flex items-center justify-center gap-2 mt-2">
-                          <span className="bg-slate-100 text-slate-500 font-black text-xs px-2 py-1 rounded">#{player.number}</span>
-                          <span className="text-xs font-bold text-red-600 uppercase tracking-widest">{position.slice(0, -1)}</span>
-                        </div>
+                      {/* Player Info */}
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-semibold text-slate-800 text-sm truncate">{player.name}</span>
+                        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest truncate">{position.slice(0, -1)}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* STATS TAB */}
+        {activeTab === 'stats' && (
+          <div className="space-y-6">
+            
+            {/* Top Level Overview (KPI Cards) */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+              <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Matches Played</span>
+                <span className="text-3xl font-semibold text-slate-900 tabular-nums">{MOCK_STATS.matchesPlayed}</span>
+              </div>
+              <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Goals Scored</span>
+                <span className="text-3xl font-semibold text-emerald-600 tabular-nums">{MOCK_STATS.goals}</span>
+              </div>
+              <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Goals Conceded</span>
+                <span className="text-3xl font-semibold text-rose-600 tabular-nums">{MOCK_STATS.goalsConceded}</span>
+              </div>
+              <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Clean Sheets</span>
+                <span className="text-3xl font-semibold text-blue-700 tabular-nums">{MOCK_STATS.cleanSheets}</span>
+              </div>
+            </div>
+
+            {/* Detailed Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Box 1: Attacking */}
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center">
+                  <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200 shadow-sm">
+                    Attacking
+                  </span>
+                </div>
+                <div className="flex flex-col bg-white">
+                  <StatRow label="Attempts at Goal" value={MOCK_STATS.attemptsAtGoal} />
+                  <StatRow label="Attempts on Target" value={MOCK_STATS.attemptsOnTarget} valueColor="text-blue-600" />
+                  <StatRow label="Assists" value={MOCK_STATS.assists} valueColor="text-emerald-600" />
+                  <StatRow label="Corners" value={MOCK_STATS.corners} />
+                  <StatRow label="Penalties Scored" value={MOCK_STATS.penaltiesScored} />
+                  <StatRow label="Own Goals (For)" value={MOCK_STATS.ownGoals} />
+                </div>
+              </div>
+
+              {/* Box 2: Passing (With micro-progress bars) */}
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center">
+                  <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200 shadow-sm">
+                    Passing
+                  </span>
+                </div>
+                
+                <div className="p-5 flex-grow flex flex-col justify-center space-y-7 bg-white">
+                  {/* Passing Accuracy */}
+                  <div>
+                    <div className="flex justify-between items-end mb-2 tabular-nums">
+                      <span className="font-medium text-slate-600 text-sm">Passes Completed</span>
+                      <span className="font-semibold text-slate-900 text-sm">{MOCK_STATS.passesCompleted} / {MOCK_STATS.passes}</span>
+                    </div>
+                    {/* Sleek, thin progress bar */}
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 shadow-inner overflow-hidden">
+                      <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${passCompletionPct}%` }}></div>
+                    </div>
+                    <p className="text-right text-[10px] font-bold text-blue-600 mt-1.5 uppercase tracking-widest">{passCompletionPct}% Accuracy</p>
+                  </div>
+
+                  {/* Crossing Accuracy */}
+                  <div>
+                    <div className="flex justify-between items-end mb-2 tabular-nums">
+                      <span className="font-medium text-slate-600 text-sm">Crosses Completed</span>
+                      <span className="font-semibold text-slate-900 text-sm">{MOCK_STATS.crossesCompleted} / {MOCK_STATS.crosses}</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 shadow-inner overflow-hidden">
+                      <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${crossCompletionPct}%` }}></div>
+                    </div>
+                    <p className="text-right text-[10px] font-bold text-emerald-600 mt-1.5 uppercase tracking-widest">{crossCompletionPct}% Accuracy</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Box 3: Defense & Discipline */}
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center">
+                  <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200 shadow-sm">
+                    Defense & Discipline
+                  </span>
+                </div>
+                <div className="flex flex-col bg-white">
+                  <StatRow label="Forced Turnovers" value={MOCK_STATS.forcedTurnovers} valueColor="text-emerald-600" />
+                  <StatRow label="Fouls Against" value={MOCK_STATS.foulsAgainst} />
+                  <StatRow label="Free Kicks Won" value={MOCK_STATS.freeKicks} />
+                  
+                  {/* Semantic Discipline Rows */}
+                  <div className="flex justify-between items-center py-3 border-b border-slate-100 px-5 hover:bg-gray-50 transition-colors text-sm tabular-nums">
+                    <span className="font-medium text-slate-600 flex items-center gap-2">
+                      <span className="w-2.5 h-3.5 bg-amber-400 rounded-sm border border-amber-500 shadow-sm"></span> Yellow Cards
+                    </span>
+                    <span className="font-semibold text-amber-600">{MOCK_STATS.yellowCards}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-3 px-5 hover:bg-gray-50 transition-colors text-sm tabular-nums">
+                    <span className="font-medium text-slate-600 flex items-center gap-2">
+                      <span className="w-2.5 h-3.5 bg-rose-600 rounded-sm border border-rose-700 shadow-sm"></span> Red Cards
+                    </span>
+                    <span className="font-semibold text-rose-600">{MOCK_STATS.redCards}</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
         )}
 

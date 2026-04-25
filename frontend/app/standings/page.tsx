@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 // --- DICTIONARIES ---
 const TEAM_RANKS: Record<string, number> = {
@@ -32,11 +33,24 @@ const FLAG_MAP: Record<string, string> = {
   "Portugal": "🇵🇹", "Congo DR": "🇨🇩", "Uzbekistan": "🇺🇿", "Colombia": "🇨🇴"
 };
 
+const getRankColor = (index: number) => {
+  if (index === 0) return 'text-amber-500 font-bold'; // Gold
+  if (index === 1) return 'text-slate-400 font-bold'; // Silver
+  if (index === 2) return 'text-amber-700 font-bold'; // Bronze
+  return 'text-slate-400 font-semibold';
+};
+
 export default function BracketStandingsPage() {
   const [standings, setStandings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
+    // 1. Load active user to highlight them on the leaderboard
+    const savedUser = localStorage.getItem('wc_user');
+    if (savedUser) setCurrentUser(JSON.parse(savedUser));
+
+    // 2. Fetch Standings Data
     const fetchStandings = async () => {
       try {
         const usersRes = await fetch('https://world-cup-api-bzrw.onrender.com/api/users');
@@ -52,6 +66,7 @@ export default function BracketStandingsPage() {
           } catch (err) { }
 
           return {
+            id: user.UserID || user.id,
             name: user.Username,
             points: user.TotalPoints || 0,
             accuracy: "0%",
@@ -72,71 +87,108 @@ export default function BracketStandingsPage() {
     fetchStandings();
   }, []);
 
-  if (isLoading) return <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 font-bold tracking-widest uppercase text-blue-800">LOADING LEADERBOARD...</div>;
+  if (isLoading) return <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 font-medium tracking-widest uppercase text-slate-500 text-sm">Loading Leaderboard...</div>;
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 p-4 sm:p-8 font-sans">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50 p-4 sm:p-6 lg:p-8 font-sans">
+      <div className="max-w-5xl mx-auto">
         
-        <div className="text-center mb-10 border-b border-slate-200 pb-8">
-          <h1 className="text-4xl font-black text-blue-900 uppercase tracking-tighter">
-            BRACKET <span className="text-red-600">STANDINGS</span>
-          </h1>
-          <p className="text-slate-500 font-bold mt-2">The ultimate test of soccer knowledge.</p>
+        {/* --- ENTERPRISE HEADER --- */}
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-slate-200 pb-4">
+          <div className="flex items-stretch gap-3">
+            <div className="w-1.5 rounded-full bg-gradient-to-b from-blue-800 via-red-600 to-emerald-600"></div>
+            <div>
+              <h1 className="text-2xl font-bold text-blue-950 tracking-tight leading-none pt-1 uppercase">Global Leaderboard</h1>
+              <p className="text-sm font-medium text-slate-500 mt-1.5 pb-1">The ultimate test of tournament knowledge.</p>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        {/* --- GHOST TABLE CONTAINER --- */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
           
-          {/* SOLID BLUE HEADER */}
-          <div className="grid grid-cols-12 gap-4 bg-blue-800 text-white p-4 font-black uppercase tracking-wider text-xs sm:text-sm">
-            <div className="col-span-2 sm:col-span-1 text-center text-blue-200">RNK</div>
-            <div className="col-span-5 sm:col-span-4">PLAYER</div>
-            <div className="hidden sm:block col-span-3 text-center">CHAMPION PICK</div>
-            <div className="col-span-3 sm:col-span-2 text-center text-blue-200">ACCURACY</div>
-            <div className="col-span-2 sm:col-span-2 text-right pr-4 text-blue-200">PTS</div>
+          {/* Subtle Table Header with Tinted Badge */}
+          <div className="flex bg-slate-50 border-b border-slate-200 px-4 py-3 items-center">
+            <div className="w-12 text-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">RNK</span>
+            </div>
+            <div className="flex-1 pl-2">
+              <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200">
+                Player Roster
+              </span>
+            </div>
+            <div className="hidden sm:block w-48 text-left">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Champion Pick</span>
+            </div>
+            <div className="hidden md:block w-24 text-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Accuracy</span>
+            </div>
+            <div className="w-16 text-right pr-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">PTS</span>
+            </div>
           </div>
 
-          <div className="divide-y divide-slate-100">
+          {/* Table Body */}
+          <div className="flex flex-col tabular-nums text-sm">
             {standings.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest">No players have joined yet!</div>
+              <div className="p-8 text-center text-[11px] text-slate-400 font-bold uppercase tracking-widest">No players have joined yet</div>
             ) : (
-              standings.map((user) => (
-                <div key={user.name} className="grid grid-cols-12 gap-4 p-4 items-center transition-colors hover:bg-slate-50">
-                  
-                  <div className="col-span-2 sm:col-span-1 text-center font-black text-slate-400">
-                    #{user.rank}
-                  </div>
-                  
-                  <div className="col-span-5 sm:col-span-4 font-black tracking-wide text-lg text-slate-900 truncate">
-                    {user.name}
-                  </div>
+              standings.map((user, index) => {
+                const isCurrentUser = currentUser && user.id === (currentUser.UserID || currentUser.id);
 
-                  {/* CHAMPION PICK WITH FLAG & RANK */}
-                  <div className="hidden sm:flex col-span-3 items-center justify-center gap-2 text-center font-bold text-slate-700 truncate">
-                    {user.champion !== "TBD" && (
-                      <span className="text-lg">{FLAG_MAP[user.champion] || ""}</span>
-                    )}
-                    <span>{user.champion}</span>
-                    {TEAM_RANKS[user.champion] && (
-                      <span className="text-[10px] text-slate-400 font-black tracking-widest">#{getRank(user.champion)}</span>
-                    )}
-                  </div>
-                  
-                  <div className="col-span-3 sm:col-span-2 text-center">
-                    <div className="inline-block bg-slate-100 border border-slate-200 text-slate-500 font-black px-3 py-1 rounded-md text-sm shadow-sm">
+                return (
+                  <div 
+                    key={user.name} 
+                    className={`flex items-center px-4 py-3.5 border-b border-slate-100 last:border-0 transition-colors ${
+                      isCurrentUser ? 'bg-blue-50/50' : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    
+                    {/* Rank */}
+                    <div className={`w-12 text-center text-sm ${getRankColor(index)}`}>
+                      {user.rank}
+                    </div>
+                    
+                    {/* Player Name */}
+                    <div className="flex-1 pl-2 truncate">
+                      <Link 
+                        href={`/profile/${user.id}`} 
+                        className={`hover:underline ${isCurrentUser ? 'font-bold text-blue-900' : 'font-semibold text-slate-800'}`}
+                      >
+                        {user.name}
+                      </Link>
+                    </div>
+
+                    {/* Champion Pick */}
+                    <div className="hidden sm:flex w-48 items-center gap-2 text-left">
+                      {user.champion !== "TBD" ? (
+                        <>
+                          <span className="text-xl leading-none rounded-full ring-1 ring-slate-200 overflow-hidden bg-white shadow-sm inline-block">
+                            {FLAG_MAP[user.champion]}
+                          </span>
+                          <span className="font-medium text-slate-700 truncate">{user.champion}</span>
+                          {TEAM_RANKS[user.champion] && (
+                            <span className="text-[9px] text-slate-400 font-bold tracking-widest">#{getRank(user.champion)}</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">TBD</span>
+                      )}
+                    </div>
+                    
+                    {/* Accuracy */}
+                    <div className="hidden md:block w-24 text-center font-medium text-slate-500">
                       {user.accuracy}
                     </div>
-                  </div>
-                  
-                  {/* GREEN POINTS BADGE */}
-                  <div className="col-span-2 sm:col-span-2 flex justify-end items-center pr-2">
-                    <span className="font-black text-white bg-green-500 px-3 py-1 rounded-md shadow-sm text-lg sm:text-xl">
+                    
+                    {/* Points */}
+                    <div className={`w-16 text-right pr-2 text-base ${index === 0 ? 'font-bold text-amber-600' : 'font-semibold text-slate-900'}`}>
                       {user.points}
-                    </span>
+                    </div>
+                    
                   </div>
-                  
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

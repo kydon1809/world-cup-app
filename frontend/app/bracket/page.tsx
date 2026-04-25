@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 
+// --- KNOCKOUT STAGE LOCKOUT DATE ---
+// Set to June 28, 2026 (Round of 32 Kickoff)
+const KNOCKOUT_START_DATE = new Date('2026-06-28T00:00:00Z');
+
 // --- DICTIONARIES ---
 const TEAM_RANKS: Record<string, number> = {
   "Spain": 1, "France": 2, "England": 3, "Brazil": 4, "Argentina": 5,
@@ -86,12 +90,17 @@ export default function BracketPage() {
   const [picks, setPicks] = useState<{ [matchId: number]: string }>({});
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isKnockoutLocked, setIsKnockoutLocked] = useState(false);
 
   const [actualWinners, setActualWinners] = useState<{ [matchId: number]: string }>({});
   const [eliminatedTeams, setEliminatedTeams] = useState<string[]>([]);
   const [groupStandings, setGroupStandings] = useState(generateOfficialGroups());
 
   useEffect(() => {
+    if (new Date() >= KNOCKOUT_START_DATE) {
+      setIsKnockoutLocked(true);
+    }
+
     const savedUser = localStorage.getItem('wc_user');
     if (savedUser) {
       const user = JSON.parse(savedUser);
@@ -112,6 +121,12 @@ export default function BracketPage() {
       alert("Please log in on the main page first!");
       return;
     }
+
+    if (isKnockoutLocked) {
+      alert("The Knockout Stage has started! Brackets are officially locked.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const payload = { user_id: Number(currentUser.UserID || currentUser.id), picks: picks };
@@ -120,7 +135,7 @@ export default function BracketPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (res.ok) alert("Bracket successfully saved to the Vault!");
+      if (res.ok) alert("Bracket successfully saved.");
       else alert("Error saving bracket.");
     } catch (error) { console.error("Save error:", error); }
     setIsSaving(false);
@@ -135,7 +150,9 @@ export default function BracketPage() {
   };
 
   const handlePick = (currentMatchId: number, team: string) => {
-    if (!team) return; 
+    if (isKnockoutLocked) return;
+    if (!team || team.includes("TBD")) return; 
+    
     const isDeselecting = picks[currentMatchId] === team;
     const newPicks = { ...picks };
 
@@ -174,18 +191,20 @@ export default function BracketPage() {
     const pickedTeam = picks[matchId];
 
     const getButtonStyle = (team: string) => {
-      if (!team) return { bg: 'bg-slate-50 text-slate-700 hover:bg-slate-100', text: '' };
+      // Replaced slate-50 with gray-50 for true neutrality
+      if (!team) return { bg: `bg-gray-50 border-transparent text-slate-400`, text: 'italic text-[12px]' };
+      
       const isEliminated = eliminatedTeams.includes(team);
       const isWinner = actualWinners[matchId] === team;
       const isSelected = pickedTeam === team;
 
       if (isSelected) {
-        if (isWinner) return { bg: 'bg-yellow-400 text-yellow-900 border-yellow-500 shadow-md relative', text: '' }; 
-        if (isEliminated) return { bg: 'bg-slate-200 text-slate-400 border-slate-300', text: 'line-through opacity-60' }; 
-        return { bg: 'bg-green-600 text-white border-green-700 shadow-md relative', text: '' }; 
+        if (isWinner) return { bg: 'bg-emerald-50 text-emerald-900 border-emerald-500 ring-1 ring-emerald-500/20 z-10 shadow-sm', text: 'font-bold' }; 
+        if (isEliminated) return { bg: 'bg-gray-50 text-slate-400 border-slate-200 opacity-60 z-10', text: 'line-through font-semibold' }; 
+        return { bg: 'bg-blue-50/80 text-blue-900 border-blue-600 ring-1 ring-blue-600/20 z-10 shadow-sm', text: 'font-bold' }; 
       } else {
-        if (isEliminated) return { bg: 'bg-slate-50 text-slate-400', text: 'line-through' }; 
-        return { bg: 'bg-white text-slate-700 hover:bg-blue-50 hover:text-blue-900', text: '' }; 
+        if (isEliminated) return { bg: 'bg-gray-50 text-slate-400 border-slate-200 opacity-60', text: 'line-through' }; 
+        return { bg: `bg-white text-slate-700 border-slate-200 ${!isKnockoutLocked ? 'hover:bg-gray-50 hover:border-slate-300' : 'opacity-90'}`, text: 'font-semibold' }; 
       }
     };
 
@@ -193,13 +212,14 @@ export default function BracketPage() {
     const bottomStyles = getButtonStyle(bottomTeam);
 
     const renderTeamContent = (team: string, styles: any) => {
-      if (!team) return <span className="text-slate-300 italic flex-1">TBD</span>;
-      const isSelected = styles.bg.includes('bg-red-600');
+      if (!team) return <span className="text-slate-400 italic flex-1 text-center text-[10px] sm:text-xs">TBD</span>;
+      const isSelected = styles.bg.includes('border-blue-600') || styles.bg.includes('border-emerald-500');
+      
       return (
         <span className={`flex items-center justify-between w-full ${styles.text}`}>
-          <span className="truncate">{team}</span>
+          <span className="truncate text-[10px] sm:text-[11px] lg:text-xs">{team}</span>
           {TEAM_RANKS[team] && (
-            <span className={`text-[10px] ml-1 font-black ${isSelected ? 'text-red-200' : 'text-slate-400'}`}>
+            <span className={`text-[9px] ml-1 font-bold hidden sm:inline ${isSelected ? (styles.bg.includes('emerald') ? 'text-emerald-600' : 'text-blue-600') : 'text-slate-400'}`}>
               #{getRank(team)}
             </span>
           )}
@@ -208,17 +228,15 @@ export default function BracketPage() {
     };
 
     return (
-      <div className="relative flex flex-col justify-center my-2 w-32 sm:w-36 text-sm group">
-        
-        {/* Connector Lines */}
-        {side === 'left' && <div className="absolute top-1/2 -right-4 sm:-right-8 w-4 sm:w-8 h-[3px] bg-slate-300 transition-colors group-hover:bg-green-600 z-0"></div>}
-        {side === 'right' && <div className="absolute top-1/2 -left-4 sm:-left-8 w-4 sm:w-8 h-[3px] bg-slate-300 transition-colors group-hover:bg-green-600 z-0"></div>}
+      <div className={`relative flex flex-col justify-center my-1 w-20 sm:w-24 md:w-28 lg:w-32 group ${isKnockoutLocked ? 'cursor-not-allowed' : ''}`}>
+        {side === 'left' && <div className={`absolute top-1/2 -right-2 sm:-right-3 md:-right-4 w-2 sm:w-3 md:w-4 h-[2px] bg-slate-200 transition-colors z-0 ${!isKnockoutLocked ? 'group-hover:bg-blue-300' : ''}`}></div>}
+        {side === 'right' && <div className={`absolute top-1/2 -left-2 sm:-left-3 md:-left-4 w-2 sm:w-3 md:w-4 h-[2px] bg-slate-200 transition-colors z-0 ${!isKnockoutLocked ? 'group-hover:bg-blue-300' : ''}`}></div>}
 
-        <div className="flex flex-col bg-white border border-slate-300 rounded-md shadow-sm overflow-hidden w-full relative z-10 transition-all hover:border-green-600">
-          <button onClick={() => handlePick(matchId, topTeam)} className={`p-2 text-left font-bold transition-all border-b border-slate-200 flex items-center ${topStyles.bg}`}>
+        <div className={`flex flex-col bg-white border border-slate-200 rounded shadow-sm w-full relative z-10 transition-all ${!isKnockoutLocked ? 'hover:shadow-md' : ''}`}>
+          <button disabled={isKnockoutLocked} onClick={() => handlePick(matchId, topTeam)} className={`p-1 sm:p-1.5 text-left transition-all border-b border-slate-100 flex items-center ${isKnockoutLocked ? 'cursor-not-allowed' : ''} ${topStyles.bg}`}>
             {renderTeamContent(topTeam, topStyles)}
           </button>
-          <button onClick={() => handlePick(matchId, bottomTeam)} className={`p-2 text-left font-bold transition-all flex items-center ${bottomStyles.bg}`}>
+          <button disabled={isKnockoutLocked} onClick={() => handlePick(matchId, bottomTeam)} className={`p-1 sm:p-1.5 text-left transition-all flex items-center rounded-b ${isKnockoutLocked ? 'cursor-not-allowed' : ''} ${bottomStyles.bg}`}>
             {renderTeamContent(bottomTeam, bottomStyles)}
           </button>
         </div>
@@ -227,7 +245,7 @@ export default function BracketPage() {
   };
 
   const MatchColumn = ({ startId, count, side }: { startId: number, count: number, side: 'left' | 'right' }) => (
-    <div className="flex flex-col justify-around min-h-[800px] relative z-20">
+    <div className="flex flex-col justify-around min-h-[500px] sm:min-h-[600px] relative z-20">
       {Array.from({ length: count }).map((_, i) => (
         <MatchNode key={startId + i} matchId={startId + i} side={side} />
       ))}
@@ -235,38 +253,59 @@ export default function BracketPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 sm:p-8 font-sans">
-      <div className="max-w-[1800px] mx-auto">
+    <div className="min-h-screen bg-slate-50 font-sans relative pb-12">
+      
+      {/* TOURNAMENT HOST BRANDING (USA/CAN/MEX) */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-800 via-red-600 to-emerald-600"></div>
+
+      <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-8 pt-8">
         
         {/* --- SECTION 1: THE KNOCKOUT BRACKET --- */}
-        <div className="text-center mb-6 border-b border-slate-200 pb-8">
-          <h1 className="text-4xl font-black text-blue-900 uppercase tracking-tighter">
-            KNOCKOUT <span className="text-red-600">STAGE</span>
-          </h1>
-          <p className="text-slate-500 font-bold mt-2 mb-4">Click a team to advance them. Correct picks turn gold, eliminated teams bust.</p>
-          
-          <div className="flex flex-col items-center justify-center gap-4">
-            <button onClick={saveBracketToVault} disabled={isSaving} className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-8 rounded-xl shadow-md transition-transform transform hover:-translate-y-1">
-              {isSaving ? "SAVING..." : "SAVE MY BRACKET"}
-            </button>
-            
-            <div className="bg-white border border-slate-200 px-6 py-3 rounded-full shadow-sm text-sm font-bold text-slate-500 hidden sm:flex gap-4">
-              <span className="text-blue-900 font-black">BRACKET POINTS:</span>
-              <span>Round of 16 <span className="text-green-600">+2</span></span>
-              <span>•</span>
-              <span>Quarter-Finals <span className="text-green-600">+4</span></span>
-              <span>•</span>
-              <span>Semi-Finals <span className="text-green-600">+8</span></span>
-              <span>•</span>
-              <span>Champion <span className="text-green-600">+16</span></span>
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-slate-200 pb-4">
+          <div className="flex items-stretch gap-3">
+            {/* The United 2026 Color Pillar */}
+            <div className="w-1.5 rounded-full bg-gradient-to-b from-blue-800 via-red-600 to-emerald-600"></div>
+            <div>
+              <h1 className="text-2xl font-bold text-blue-950 tracking-tight leading-none pt-1 uppercase">Tournament Bracket</h1>
+              <p className="text-sm font-medium text-slate-500 mt-1.5 pb-1">Click a team to advance them through the Knockout Stage.</p>
             </div>
+          </div>
+          
+          <div className="mt-4 md:mt-0 flex flex-col sm:flex-row items-center gap-4">
+             {/* Subtle Points Legend */}
+             <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest hidden lg:flex items-center gap-3">
+               <span className="text-slate-400">Pts:</span>
+               <span>R16 <span className="text-emerald-600">+2</span></span>
+               <span>QF <span className="text-emerald-600">+4</span></span>
+               <span>SF <span className="text-emerald-600">+8</span></span>
+               <span>Champ <span className="text-emerald-600">+16</span></span>
+             </div>
+
+             <button 
+              onClick={saveBracketToVault} 
+              disabled={isSaving || isKnockoutLocked} 
+              className={`font-bold py-2 px-6 rounded-md text-sm transition-colors shadow-sm
+                ${isKnockoutLocked 
+                  ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed' 
+                  : 'bg-blue-700 hover:bg-blue-800 text-white'
+                }`}
+            >
+              {isKnockoutLocked ? "🔒 Bracket Locked" : isSaving ? "Saving..." : "Save Bracket"}
+            </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto pb-16 scrollbar-hide border-b-4 border-slate-200 mb-16">
-          <div className="flex min-w-[1400px] mx-auto px-4 mt-8">
+        {/* The Warning Banner */}
+        {isKnockoutLocked && (
+          <div className="mb-4 bg-rose-50 text-rose-700 font-bold px-4 py-2.5 rounded-md text-sm border border-rose-200 shadow-sm flex items-center justify-center gap-2">
+            <span>🔒</span> Knockout Stage has commenced. Brackets are officially locked.
+          </div>
+        )}
+
+        <div className="overflow-x-auto pb-8 scrollbar-hide border-b border-slate-200 mb-10">
+          <div className="flex w-full min-w-[800px] xl:min-w-0 mx-auto mt-2">
             
-            <div className="flex flex-1 justify-between pr-4 sm:pr-8 gap-4 sm:gap-8">
+            <div className="flex flex-1 justify-between pr-2 sm:pr-3 md:pr-4 gap-2 sm:gap-3 md:gap-4">
               <MatchColumn startId={1} count={8} side="left" />  
               <MatchColumn startId={17} count={4} side="left" /> 
               <MatchColumn startId={25} count={2} side="left" /> 
@@ -274,30 +313,27 @@ export default function BracketPage() {
             </div>
 
             {/* --- FIXED CENTER COLUMN --- */}
-            <div className="relative flex flex-col items-center justify-center w-[250px] sm:w-[300px] flex-none min-h-[800px]">
+            <div className="relative flex flex-col items-center justify-center w-[100px] sm:w-[140px] md:w-[180px] flex-none min-h-[500px] sm:min-h-[600px]">
               
-              {/* CHAMPION BOX - Absolute positioned so it doesn't affect the flex layout of the final match box */}
-              <div className="absolute top-4 sm:top-12 left-1/2 transform -translate-x-1/2 text-center flex flex-col items-center w-full">
-                <h2 className="text-xl sm:text-2xl font-black text-yellow-500 uppercase tracking-widest mb-4">Champion</h2>
-                <div className={`w-48 sm:w-64 p-4 sm:p-6 border-4 rounded-2xl shadow-xl font-black text-xl sm:text-3xl flex flex-col items-center justify-center min-h-[80px] sm:min-h-[100px] transition-all
+              <div className="absolute top-12 sm:top-16 md:top-20 left-1/2 transform -translate-x-1/2 text-center flex flex-col items-center w-full">
+                <h2 className="text-[10px] sm:text-[11px] font-bold text-amber-600 uppercase tracking-widest mb-1.5">Champion</h2>
+                <div className={`w-28 sm:w-36 md:w-44 p-2 sm:p-3 border rounded-md shadow-sm flex flex-col items-center justify-center min-h-[50px] sm:min-h-[60px] transition-all bg-white
                   ${eliminatedTeams.includes(picks[31] || "") 
-                    ? "bg-slate-200 border-slate-300 text-slate-400 line-through opacity-80" 
+                    ? "border-slate-200 text-slate-400 line-through opacity-80" 
                     : actualWinners[31] === picks[31] && picks[31]
-                      ? "bg-yellow-400 border-yellow-500 text-yellow-900"
-                      : "bg-yellow-500 border-yellow-500 text-white"
+                      ? "border-amber-400 text-amber-900 ring-1 ring-amber-400/30 bg-amber-50"
+                      : "border-amber-300 text-slate-900"
                   }`}
                 >
-                  <span className="truncate w-full text-center">{picks[31] || "..."}</span>
+                  <span className="truncate w-full text-center font-bold text-xs sm:text-sm md:text-base">{picks[31] || "—"}</span>
                   {picks[31] && TEAM_RANKS[picks[31]] && (
-                     <span className="text-xs tracking-widest uppercase mt-1 opacity-80 font-bold">Rank #{getRank(picks[31])}</span>
+                     <span className="text-[9px] tracking-widest uppercase mt-0.5 text-amber-600/80 font-bold hidden sm:block">Rank #{getRank(picks[31])}</span>
                   )}
                 </div>
               </div>
 
-              {/* FINAL MATCH BOX - Flex centered in the 800px container to match the left/right columns */}
               <div className="relative z-10 w-full flex flex-col items-center justify-center">
-                {/* Title floats above the box so the box itself is the true center point */}
-                <h2 className="absolute bottom-full mb-2 w-max text-lg sm:text-xl font-black text-slate-400 uppercase tracking-widest text-center">
+                <h2 className="absolute bottom-full mb-1 sm:mb-2 w-max text-[9px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">
                   Final Match
                 </h2>
                 <MatchNode matchId={31} side="center" />
@@ -305,7 +341,7 @@ export default function BracketPage() {
 
             </div>
 
-            <div className="flex flex-1 justify-between flex-row-reverse pl-4 sm:pl-8 gap-4 sm:gap-8">
+            <div className="flex flex-1 justify-between flex-row-reverse pl-2 sm:pl-3 md:pl-4 gap-2 sm:gap-3 md:gap-4">
               <MatchColumn startId={9} count={8} side="right" />   
               <MatchColumn startId={21} count={4} side="right" />  
               <MatchColumn startId={27} count={2} side="right" />  
@@ -315,51 +351,62 @@ export default function BracketPage() {
         </div>
 
         {/* --- SECTION 2: THE GROUP STAGE STANDINGS --- */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-black text-blue-900 uppercase tracking-tighter">GROUP STAGE STANDINGS</h2>
-            <p className="text-slate-500 font-bold mt-2">Live tables for all 12 groups.</p>
+        <div className="max-w-7xl mx-auto px-0">
+          
+          <div className="mb-6 border-b border-slate-200 pb-4 flex items-stretch gap-3 mt-12">
+            <div className="w-1.5 rounded-full bg-gradient-to-b from-blue-800 via-red-600 to-emerald-600"></div>
+            <div>
+              <h2 className="text-xl font-bold text-blue-950 tracking-tight leading-none pt-1 uppercase">Group Stage Standings</h2>
+              <p className="text-sm font-medium text-slate-500 mt-1.5 pb-1">Live tables for all 12 groups.</p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {groupStandings.map((group, idx) => (
-              <div key={idx} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div key={idx} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
                 
-                <div className="flex justify-between items-center p-4 bg-blue-800 text-white">
-                  <h3 className="font-black text-lg whitespace-nowrap pr-2 uppercase">{group.name}</h3>
-                  <div className="flex text-xs font-black text-blue-200 tracking-wider">
-                    <span className="w-6 sm:w-8 text-center flex-shrink-0" title="Played">P</span>
-                    <span className="w-6 sm:w-8 text-center flex-shrink-0" title="Wins">W</span>
-                    <span className="w-6 sm:w-8 text-center flex-shrink-0" title="Draws">D</span>
-                    <span className="w-6 sm:w-8 text-center flex-shrink-0" title="Losses">L</span>
-                    <span className="w-8 sm:w-10 text-center flex-shrink-0" title="Goal Difference">GD</span>
-                    <span className="w-8 sm:w-10 text-center text-white flex-shrink-0" title="Points">PTS</span>
+                {/* Standings Header (Tinted Badge Format) */}
+                <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex justify-between items-center text-[10px] uppercase tracking-wider">
+                  <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded font-bold uppercase tracking-widest border border-blue-200 shadow-sm">
+                    {group.name}
+                  </span>
+                  <div className="flex">
+                    <span className="w-6 sm:w-8 text-center font-bold text-slate-400" title="Played">P</span>
+                    <span className="w-6 sm:w-8 text-center font-bold text-slate-400" title="Wins">W</span>
+                    <span className="w-6 sm:w-8 text-center font-bold text-slate-400" title="Draws">D</span>
+                    <span className="w-6 sm:w-8 text-center font-bold text-slate-400" title="Losses">L</span>
+                    <span className="w-8 sm:w-10 text-center font-bold text-slate-400" title="Goal Difference">GD</span>
+                    <span className="w-8 sm:w-10 text-center font-bold text-blue-900" title="Points">PTS</span>
                   </div>
                 </div>
 
-                <div className="flex flex-col">
+                {/* Standings Rows */}
+                <div className="flex flex-col tabular-nums text-sm bg-white">
                   {group.teams.map((team, tIdx) => (
-                    <div key={tIdx} className="relative flex justify-between items-center p-3 sm:p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                    <div key={tIdx} className="flex justify-between items-center px-4 py-2 border-b border-slate-100 last:border-0 hover:bg-gray-50 transition-colors">
                       
-                      {tIdx < 2 && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 rounded-r-sm shadow-sm"></div>
-                      )}
-
-                      <div className="flex items-center space-x-2 sm:space-x-3 flex-1 pl-2 min-w-0">
-                        <span className="text-slate-400 font-bold text-sm w-3 flex-shrink-0">{tIdx + 1}</span>
-                        <span className="text-lg flex-shrink-0">{FLAG_MAP[team.name] || ""}</span>
-                        <span className="font-bold text-slate-900 tracking-wide truncate" title={team.name}>
-                          {FIFA_CODES[team.name] || team.name} <span className="text-[10px] text-slate-400 ml-1">#{getRank(team.name)}</span>
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        {/* Clinical Advancement Indicator */}
+                        <span className={`w-4 text-[10px] font-bold text-right ${tIdx < 2 ? 'text-emerald-600' : 'text-transparent'}`}>
+                          x -
+                        </span>
+                        
+                        <span className="text-sm flex-shrink-0 leading-none rounded-full ring-1 ring-slate-200 overflow-hidden inline-block bg-white shadow-sm">{FLAG_MAP[team.name] || ""}</span>
+                        
+                        <span className="font-semibold text-slate-800 truncate" title={team.name}>
+                          {FIFA_CODES[team.name] || team.name} 
                         </span>
                       </div>
 
-                      <div className="flex text-sm font-bold">
-                        <span className="w-6 sm:w-8 text-center text-slate-500 flex-shrink-0">{team.played}</span>
-                        <span className="w-6 sm:w-8 text-center text-slate-500 flex-shrink-0">{team.won}</span>
-                        <span className="w-6 sm:w-8 text-center text-slate-500 flex-shrink-0">{team.draw}</span>
-                        <span className="w-6 sm:w-8 text-center text-slate-500 flex-shrink-0">{team.lost}</span>
-                        <span className="w-8 sm:w-10 text-center text-slate-500 flex-shrink-0">{team.gd}</span>
-                        <span className="w-8 sm:w-10 text-center text-blue-900 font-black flex-shrink-0">{team.pts}</span>
+                      <div className="flex font-medium text-slate-600">
+                        <span className="w-6 sm:w-8 text-center">{team.played}</span>
+                        <span className="w-6 sm:w-8 text-center">{team.won}</span>
+                        <span className="w-6 sm:w-8 text-center">{team.draw}</span>
+                        <span className="w-6 sm:w-8 text-center">{team.lost}</span>
+                        <span className={`w-8 sm:w-10 text-center font-semibold ${team.gd > 0 ? 'text-emerald-600' : team.gd < 0 ? 'text-rose-600' : 'text-slate-600'}`}>
+                          {team.gd > 0 ? `+${team.gd}` : team.gd}
+                        </span>
+                        <span className="w-8 sm:w-10 text-center font-bold text-slate-900">{team.pts}</span>
                       </div>
                     </div>
                   ))}
@@ -368,18 +415,18 @@ export default function BracketPage() {
             ))}
           </div>
 
-          <div className="mt-10 max-w-4xl mx-auto bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center text-sm font-bold text-slate-700">
-              <span className="w-3 h-3 bg-green-500 rounded-sm mr-3 shadow-sm"></span> 
-              Top 2 teams qualify for Knockout Stage
+          {/* Minimal Legend */}
+          <div className="mt-8 border-t border-slate-200 pt-6 flex flex-col md:flex-row justify-between text-[10px] text-slate-500 uppercase tracking-widest">
+            <div className="font-bold mb-4 md:mb-0">
+              <span className="text-emerald-600">x - </span> Clinched Knockout Stage
             </div>
-            <div className="flex flex-wrap justify-center gap-4 text-xs font-bold text-slate-400 tracking-wider uppercase">
-              <span title="Matches Played"><span className="text-blue-900">P:</span> Played</span>
-              <span title="Wins (3 Points)"><span className="text-blue-900">W:</span> Wins</span>
-              <span title="Draws (1 Point)"><span className="text-blue-900">D:</span> Draws</span>
-              <span title="Losses (0 Points)"><span className="text-blue-900">L:</span> Losses</span>
-              <span title="Goals For minus Goals Against"><span className="text-blue-900">GD:</span> Goal Difference</span>
-              <span title="Total Points"><span className="text-blue-900">PTS:</span> Points</span>
+            <div className="flex gap-4 flex-wrap font-medium">
+              <span><strong className="text-slate-700">P:</strong> Played</span>
+              <span><strong className="text-slate-700">W:</strong> Wins</span>
+              <span><strong className="text-slate-700">D:</strong> Draws</span>
+              <span><strong className="text-slate-700">L:</strong> Losses</span>
+              <span><strong className="text-slate-700">GD:</strong> Goal Difference</span>
+              <span><strong className="text-slate-700">PTS:</strong> Points</span>
             </div>
           </div>
           

@@ -33,15 +33,16 @@ app = FastAPI()
 
 # --- LOCKED DOWN BOUNCER (CORS) ---
 # Replace localhost with your Vercel/Netlify domain when you launch!
+# --- LOCKED DOWN BOUNCER (CORS) ---
 origins = [
-    "http://localhost:3000",
-    "https://your-world-cup-app.vercel.app",
+    "http://localhost:3000", 
+    "https://world-cup-app-ten.vercel.app"  # <-- ADD THIS LINE!
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins, 
-    allow_credentials=True, # CRITICAL: This must be True to accept cookies
+    allow_credentials=True, 
     allow_methods=["*"],  
     allow_headers=["*"],
 )

@@ -20,8 +20,9 @@ export default function Navbar() {
 
   const isActive = (path: string) => pathname === path;
 
-  const navPaths = ['/', '/bracket', '/picks', '/teams', '/standings', '/stats'];
-  const navLabels = ['Group Stage', 'Knockout', 'Picks', 'Teams', 'Standings', 'Stats'];
+  // --- UPDATED NAVIGATION ARRAYS ---
+  const navPaths = ['/', '/bracket', '/picks', '/teams', '/stats'];
+  const navLabels = ['Group Stage', 'Knockout', 'Props', 'Teams', 'Stats'];
 
   return (
     <nav className="bg-[#2b2c2d] text-white sticky top-0 z-50 border-b border-[#2b2c2d] shadow-md">

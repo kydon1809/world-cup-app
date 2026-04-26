@@ -1,6 +1,6 @@
 import os
 import json
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
@@ -10,12 +10,16 @@ from typing import List, Optional
 import models
 from datetime import datetime
 
-# NEW: Import the security libraries
 import bcrypt
+import jwt  # NEW: For generating secure session tokens
+from jwt.exceptions import PyJWTError
 
 # --- CONFIGURATION ---
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
+# NEW: Secret key for encrypting our JWTs. (Add this to your .env file!)
+SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-fallback-key-change-me")
+ALGORITHM = "HS256"
 
 if not DATABASE_URL:
     raise ValueError("CRITICAL ERROR: No DATABASE_URL set in the .env file.")
@@ -27,11 +31,17 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# --- ONLY ONE BOUNCER ALLOWED ---
+# --- LOCKED DOWN BOUNCER (CORS) ---
+# Replace localhost with your Vercel/Netlify domain when you launch!
+origins = [
+    "http://localhost:3000",
+    "https://your-world-cup-app.vercel.app",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # The "*" means "allow requests from any website"
-    allow_credentials=False, # MUST be False when using "*"
+    allow_origins=origins, 
+    allow_credentials=True, # CRITICAL: This must be True to accept cookies
     allow_methods=["*"],  
     allow_headers=["*"],
 )
@@ -51,6 +61,30 @@ def get_password_hash(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+def create_access_token(data: dict):
+    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+
+# NEW: The Guard at the Door. This intercepts requests and checks their VIP wristband (Cookie)
+def get_current_user(request: Request, db: Session = Depends(get_db)):
+    token = request.cookies.get("wc_session")
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated. No cookie found.")
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: int = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid authentication token.")
+    except PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired authentication token.")
+        
+    user = db.query(models.User).filter(models.User.UserID == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found.")
+        
+    return user
+
 
 # --- PYDANTIC SCHEMAS ---
 class UserCreate(BaseModel):
@@ -75,13 +109,6 @@ class BracketUpdate(BaseModel):
     user_id: int
     picks: dict  
 
-class BracketResponse(BaseModel):
-    UserID: int
-    PicksJSON: str
-    TotalScore: int
-    class Config:
-        from_attributes = True
-
 class MatchPickCreate(BaseModel):
     user_id: int
     match_id: str
@@ -102,7 +129,6 @@ class MatchResultInput(BaseModel):
     MatchID: str
     WinningTeam: str
 
-# NEW: Schema for Props
 class PropsUpdate(BaseModel):
     user_id: int
     props: dict  
@@ -112,26 +138,23 @@ class PropsUpdate(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"status": "online", "message": "World Cup API is running!"}
+    return {"status": "online", "message": "World Cup API is running securely!"}
 
 @app.get("/api/matches")
 def get__matches():
     try:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(current_dir, "matches.json")
-        
         with open(file_path, "r") as file:
             matches = json.load(file)
         return matches
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="matches.json file not found!")
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Error reading the JSON format.")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error reading matches.")
 
 # -- USERS & AUTHENTICATION --
 
 @app.post("/api/users", response_model=UserResponse)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
+def create_user(user: UserCreate, response: Response, db: Session = Depends(get_db)):
     existing_user = db.query(models.User).filter(
         (models.User.Username == user.Username) | (models.User.Email == user.Email)
     ).first()
@@ -139,20 +162,33 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Username or Email already registered.")
     
     hashed_pw = get_password_hash(user.Password)
-    
     db_user = models.User(Username=user.Username, Email=user.Email, PasswordHash=hashed_pw)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+
+    # Automatically log them in by issuing a cookie upon registration
+    token = create_access_token({"sub": db_user.UserID})
+    response.set_cookie(key="wc_session", value=token, httponly=True, secure=True, samesite="lax")
+    
     return db_user
 
 @app.post("/api/login", response_model=UserResponse)
-def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
+def login_user(credentials: UserLogin, response: Response, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.Username == credentials.username).first()
     
     if not user or not verify_password(credentials.password, user.PasswordHash):
         raise HTTPException(status_code=401, detail="Invalid username or password.")
         
+    # NEW: Generate the JWT and attach it to the response as an HttpOnly cookie
+    token = create_access_token({"sub": user.UserID})
+    response.set_cookie(
+        key="wc_session", 
+        value=token, 
+        httponly=True, # JavaScript CANNOT read this cookie (XSS protection)
+        secure=True,   # Only sent over HTTPS
+        samesite="lax"
+    )
     return user
 
 @app.get("/api/users", response_model=List[UserResponse])
@@ -164,11 +200,16 @@ def get_users(db: Session = Depends(get_db)):
 
 @app.get("/api/users/{user_id}/picks", response_model=List[MatchPickResponse])
 def get_user_picks(user_id: int, db: Session = Depends(get_db)):
+    # Optional: You could secure this to only let users see their own picks until the game starts!
     picks = db.query(models.MatchPick).filter(models.MatchPick.UserID == user_id).all()
     return picks
 
 @app.post("/api/picks", response_model=MatchPickResponse)
-def submit_pick(pick: MatchPickCreate, db: Session = Depends(get_db)):
+def submit_pick(pick: MatchPickCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # SECURE: Prevent a user from submitting a pick for someone else!
+    if pick.user_id != current_user.UserID:
+        raise HTTPException(status_code=403, detail="Nice try. You can only submit picks for your own account.")
+
     current_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(current_dir, "matches.json")
     with open(file_path, "r") as file:
@@ -187,10 +228,6 @@ def submit_pick(pick: MatchPickCreate, db: Session = Depends(get_db)):
 
     if match_date == today_str and now.hour >= 11:
         raise HTTPException(status_code=403, detail="Today's games have kicked off! Picks are locked.")
-
-    user = db.query(models.User).filter(models.User.UserID == pick.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
 
     if pick.is_lock:
         matches_on_this_date = [str(m["id"]) for m in matches if m.get("date", today_str) == match_date]
@@ -225,8 +262,6 @@ def submit_pick(pick: MatchPickCreate, db: Session = Depends(get_db)):
 
 # -- BRACKETS --
 
-# -- BRACKETS --
-
 @app.get("/api/users/{user_id}/bracket")
 def get_user_bracket(user_id: int, db: Session = Depends(get_db)):
     try:
@@ -237,19 +272,17 @@ def get_user_bracket(user_id: int, db: Session = Depends(get_db)):
         
         if not result:
             return {"picks": {}} 
-            
-        import json
         return {"picks": json.loads(result[1])}
     except Exception:
-        # Failsafe: If the table hasn't been created yet, just return empty
         return {"picks": {}}
 
 @app.post("/api/bracket")
-def save_bracket(bracket: BracketUpdate, db: Session = Depends(get_db)):
-    import json
+def save_bracket(bracket: BracketUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # SECURE: Prevent bracket tampering!
+    if bracket.user_id != current_user.UserID:
+        raise HTTPException(status_code=403, detail="You can only save your own bracket.")
+
     picks_string = json.dumps(bracket.picks)
-    
-    # FIX: Auto-create the table if it doesn't exist yet!
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS UserBrackets (
             UserID INTEGER PRIMARY KEY,
@@ -289,19 +322,17 @@ def get_user_props(user_id: int, db: Session = Depends(get_db)):
         
         if not result:
             return {"props": {}} 
-            
-        import json
         return {"props": json.loads(result[0])}
     except Exception:
-        # Failsafe: If the table hasn't been created yet, just return empty
         return {"props": {}}
 
 @app.post("/api/props")
-def save_props(props_data: PropsUpdate, db: Session = Depends(get_db)):
-    import json
+def save_props(props_data: PropsUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # SECURE: Prevent props tampering!
+    if props_data.user_id != current_user.UserID:
+        raise HTTPException(status_code=403, detail="You can only save your own props.")
+
     props_string = json.dumps(props_data.props)
-    
-    # Auto-create the table if it doesn't exist yet!
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS UserProps (
             UserID INTEGER PRIMARY KEY,
@@ -309,28 +340,19 @@ def save_props(props_data: PropsUpdate, db: Session = Depends(get_db)):
         )
     """))
     
-    existing = db.execute(
-        text("SELECT UserID FROM UserProps WHERE UserID = :uid"), 
-        {"uid": props_data.user_id}
-    ).fetchone()
-    
+    existing = db.execute(text("SELECT UserID FROM UserProps WHERE UserID = :uid"), {"uid": props_data.user_id}).fetchone()
     if existing:
-        db.execute(
-            text("UPDATE UserProps SET PropsJSON = :props WHERE UserID = :uid"),
-            {"props": props_string, "uid": props_data.user_id}
-        )
+        db.execute(text("UPDATE UserProps SET PropsJSON = :props WHERE UserID = :uid"), {"props": props_string, "uid": props_data.user_id})
     else:
-        db.execute(
-            text("INSERT INTO UserProps (UserID, PropsJSON) VALUES (:uid, :props)"),
-            {"uid": props_data.user_id, "props": props_string}
-        )
+        db.execute(text("INSERT INTO UserProps (UserID, PropsJSON) VALUES (:uid, :props)"), {"uid": props_data.user_id, "props": props_string})
         
     db.commit()
-    return {"status": "success", "message": "Props securely locked in the vault!"}
+    return {"status": "success"}
 
 # -- SCORING ENGINE (ADMIN) --
 @app.post("/api/admin/score")
-def score_match(result: MatchResultInput, db: Session = Depends(get_db)):
+def score_match(result: MatchResultInput, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # IDEALLY: Add an admin check here later! e.g., if current_user.Username != "TheDon09": raise HTTPException(403)
     picks = db.query(models.MatchPick).filter(models.MatchPick.MatchID == result.MatchID).all()
     winners_count = 0
     
@@ -347,7 +369,4 @@ def score_match(result: MatchResultInput, db: Session = Depends(get_db)):
             winners_count += 1
             
     db.commit()
-    return {
-        "status": "success", 
-        "message": f"Match {result.MatchID} scored! {winners_count} family member(s) correctly guessed {result.WinningTeam}."
-    }
+    return {"status": "success"}

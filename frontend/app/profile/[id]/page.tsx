@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useRef, use } from 'react';
 
+// --- CONFIGURATION ---
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://world-cup-api-bzrw.onrender.com';
+
 // --- DICTIONARIES ---
 const FLAG_MAP: Record<string, string> = {
   "Mexico": "🇲🇽", "South Africa": "🇿🇦", "Korea Republic": "🇰🇷", "Czechia": "🇨🇿",
@@ -26,6 +29,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const [currentUser, setCurrentUser] = useState<any>(null); 
   const [championPick, setChampionPick] = useState<string>("TBD");
   const [recentPicks, setRecentPicks] = useState<any[]>([]);
+  const [userProps, setUserProps] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
   
   // --- AVATAR STATE & REF ---
@@ -37,22 +41,23 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     const savedUser = localStorage.getItem('wc_user');
     if (savedUser) setCurrentUser(JSON.parse(savedUser));
 
-    // 2. Load the profile's saved avatar from local storage
-    const savedAvatar = localStorage.getItem(`wc_avatar_${userId}`);
-    if (savedAvatar) setAvatarUrl(savedAvatar);
-
     const fetchProfileData = async () => {
       try {
         // Fetch User Info
-        const usersRes = await fetch('https://world-cup-api-bzrw.onrender.com/api/users');
+        const usersRes = await fetch(`${API_URL}/api/users`);
         const users = await usersRes.json();
         const foundUser = users.find((u: any) => String(u.UserID || u.id) === userId);
         setProfileUser(foundUser);
 
         if (foundUser) {
+          // Load Avatar directly from the backend database!
+          if (foundUser.AvatarBase64) {
+            setAvatarUrl(foundUser.AvatarBase64);
+          }
+
           // Fetch Bracket
           try {
-            const bracketRes = await fetch(`https://world-cup-api-bzrw.onrender.com/api/users/${userId}/bracket`);
+            const bracketRes = await fetch(`${API_URL}/api/users/${userId}/bracket`);
             const bracketData = await bracketRes.json();
             if (bracketData.picks && bracketData.picks["31"]) {
               setChampionPick(bracketData.picks["31"]);
@@ -61,12 +66,19 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
           // Fetch Daily Picks
           try {
-            const picksRes = await fetch(`https://world-cup-api-bzrw.onrender.com/api/users/${userId}/picks`);
+            const picksRes = await fetch(`${API_URL}/api/users/${userId}/picks`);
             const picksData = await picksRes.json();
             if (Array.isArray(picksData)) {
               setRecentPicks(picksData);
             }
           } catch (e) { console.log("No picks found"); }
+
+          // Fetch Tournament Props
+          try {
+            const propsRes = await fetch(`${API_URL}/api/users/${userId}/props`);
+            const propsData = await propsRes.json();
+            setUserProps(propsData.props || {});
+          } catch (e) { console.log("No props found"); }
         }
       } catch (error) {
         console.error("Error loading profile:", error);
@@ -78,18 +90,32 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     fetchProfileData();
   }, [userId]);
 
-  // --- HANDLE IMAGE UPLOAD ---
+  // --- SECURE IMAGE UPLOAD ---
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setAvatarUrl(base64String);
-        localStorage.setItem(`wc_avatar_${userId}`, base64String);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (file.size > 1048576) { // 1MB limit for Base64 storage
+      alert("File is too large. Please choose an image under 1MB.");
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result as string;
+      setAvatarUrl(base64String); // Update UI immediately
+
+      // Send the image to the secure backend
+      try {
+        await fetch(`${API_URL}/api/users/avatar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ user_id: currentUser?.UserID || currentUser?.id, avatar_base64: base64String })
+        });
+      } catch (err) { console.error("Avatar upload failed", err); }
+    };
+    reader.readAsDataURL(file);
   };
 
   if (isLoading) return <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-50 font-bold tracking-widest uppercase text-slate-400 text-sm">Loading Scouting Report...</div>;
@@ -107,8 +133,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       {/* TOURNAMENT HOST BRANDING */}
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-800 via-red-600 to-emerald-600 z-10"></div>
 
-      {/* PLAYER HERO BANNER */}
-      <div className="bg-[#2b2c2d] text-white pt-10 pb-8 px-4 border-b border-slate-800 shadow-sm relative">
+      {/* PLAYER HERO BANNER (Restored to your dark theme) */}
+      <div className="bg-[#2b2c2d] text-white pt-10 pb-8 px-4 border-b border-slate-800 shadow-sm relative z-0">
         <div className="max-w-5xl mx-auto flex items-center gap-6">
           
           {/* --- INTERACTIVE AVATAR --- */}
@@ -117,7 +143,6 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                /* --- NEW: DEFAULT SILHOUETTE --- */
                 <svg className="w-12 h-12 sm:w-14 sm:h-14 text-blue-400 opacity-80 mt-2" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                 </svg>
@@ -167,7 +192,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         
         {/* KPI DASHBOARD */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Group Stage Picks</span>
             <span className="text-3xl font-semibold text-slate-900 tabular-nums">{totalPicksMade}</span>
@@ -197,13 +222,56 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           </div>
         </div>
 
+        {/* --- TOURNAMENT PROPS DISPLAY --- */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden mb-8">
+          {/* NEW CLEAN HEADER */}
+          <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+             <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200 shadow-sm">
+               Tournament Picks
+             </span>
+             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+               Props
+             </span>
+          </div>
+          
+          <div className="p-0">
+            {Object.keys(userProps).length === 0 ? (
+              <div className="p-8 text-center text-sm text-slate-500 font-medium">
+                {isCurrentUser ? "You haven't submitted your tournament props yet." : "This player hasn't submitted their tournament props yet."}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                <div className="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Golden Boot</span>
+                  <span className="font-semibold text-blue-900">{userProps.goldenBoot || "Not Selected"}</span>
+                </div>
+                <div className="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Golden Ball</span>
+                  <span className="font-semibold text-blue-900">{userProps.goldenBall || "Not Selected"}</span>
+                </div>
+                <div className="p-5 flex items-center justify-between border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Golden Glove</span>
+                  <span className="font-semibold text-blue-900">{userProps.goldenGlove || "Not Selected"}</span>
+                </div>
+                <div className="p-5 flex items-center justify-between border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tournament Winner</span>
+                  <span className="font-semibold text-blue-900">{userProps.champion || "Not Selected"}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* RECENT PICKS TABLE */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-200 px-5 py-4 flex justify-between items-start">
-            <div className="flex items-center gap-3">
-              <div className="w-1.5 h-4 rounded-full bg-blue-600"></div>
-              <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-widest">Scouting Report: Group Stage Picks</h2>
-            </div>
+          {/* NEW CLEAN HEADER */}
+          <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+             <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-blue-200 shadow-sm">
+               Scouting Report
+             </span>
+             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+               Group Stage Picks
+             </span>
           </div>
           
           {validPicks.length === 0 ? (
@@ -217,7 +285,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 <div className="w-24 text-right">Lock Status</div>
               </div>
               
-              {/* Rows mapped to validPicks instead of recentPicks */}
+              {/* Rows */}
               {validPicks.map((pick, idx) => (
                 <div key={idx} className="flex items-center px-5 py-3.5 border-b border-slate-100 last:border-0 hover:bg-gray-50 transition-colors">
                   <div className="w-24 font-bold text-slate-400 tabular-nums">#{pick.MatchID}</div>

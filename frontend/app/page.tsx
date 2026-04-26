@@ -210,6 +210,8 @@ export default function Home() {
       else finalIsLock = dailyLocks[selectedDate] === matchId; 
     }
 
+    console.log("📸 CAMERA CHECK: Sending request to:", `${API_URL}/api/picks`);
+    
     try {
       const payload = { user_id: Number(currentUser.UserID || currentUser.id), match_id: String(matchId), picked_team: finalTeam, is_lock: finalIsLock };
       const res = await fetch(`${API_URL}/api/picks`, {
@@ -371,7 +373,7 @@ export default function Home() {
                     <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-3">
                       <button onClick={() => submitPick(match.id, match.home)} disabled={isLocked} className={`flex-1 w-full py-3 px-4 rounded-md border transition-all duration-200 flex items-center justify-between text-sm ${lockedPicks[match.id] === match.home ? 'bg-blue-50 text-blue-900 border-blue-600 ring-2 ring-blue-600/30 shadow-md font-bold' : isLocked ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed opacity-70' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:border-blue-400 hover:shadow-sm font-semibold'}`}>
                         <span className="flex items-center gap-3"><span className="text-xl leading-none rounded-full ring-1 ring-slate-200 overflow-hidden shadow-sm">{getFlag(match.home)}</span><span>{match.home}</span></span>
-                        <span className={`text-[10px] ${lockedPicks[match.id] === match.home ? "text-blue-600" : "text-slate-400"}`}>#{getRank(match.home)}</span>
+                        <span className={`text-xs ${lockedPicks[match.id] === match.home ? "text-blue-600" : "text-slate-400"}`}>#{getRank(match.home)}</span>
                       </button>
                       
                       <button onClick={() => submitPick(match.id, "Draw")} disabled={isLocked} className={`w-full sm:w-auto px-6 py-3 rounded-md border transition-all duration-200 text-sm uppercase tracking-wider ${lockedPicks[match.id] === "Draw" ? 'bg-slate-100 text-slate-900 border-slate-500 ring-2 ring-slate-500/30 shadow-md font-bold' : isLocked ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed opacity-70' : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-50 hover:border-slate-400 hover:shadow-sm font-semibold'}`}>
@@ -379,7 +381,7 @@ export default function Home() {
                       </button>
                       
                       <button onClick={() => submitPick(match.id, match.away)} disabled={isLocked} className={`flex-1 w-full py-3 px-4 rounded-md border transition-all duration-200 flex items-center justify-between text-sm ${lockedPicks[match.id] === match.away ? 'bg-blue-50 text-blue-900 border-blue-600 ring-2 ring-blue-600/30 shadow-md font-bold' : isLocked ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed opacity-70' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:border-blue-400 hover:shadow-sm font-semibold'}`}>
-                        <span className={`text-[10px] ${lockedPicks[match.id] === match.away ? "text-blue-600" : "text-slate-400"}`}>#{getRank(match.away)}</span>
+                        <span className={`text-xs ${lockedPicks[match.id] === match.away ? "text-blue-600" : "text-slate-400"}`}>#{getRank(match.away)}</span>
                         <span className="flex items-center gap-3"><span>{match.away}</span><span className="text-xl leading-none rounded-full ring-1 ring-slate-200 overflow-hidden shadow-sm">{getFlag(match.away)}</span></span>
                       </button>
                     </div>
@@ -395,7 +397,7 @@ export default function Home() {
 
               {/* --- COMPACT BOTTOM DATE SELECTOR --- */}
               <div className="flex justify-end pt-2 mb-6">
-                <div className="inline-flex items-center bg-blue-50 border border-blue-200 rounded-md shadow-sm text-sm overflow-hidden">
+                <div className="inline-flex items-center bg-white border border-blue-200 rounded-md shadow-sm text-sm overflow-hidden">
                   <button onClick={handlePrevDay} disabled={currentIndex === 0} className="px-4 py-2 text-blue-700 hover:bg-blue-100 disabled:opacity-30 border-r border-blue-200 transition-colors font-bold">&lt;</button>
                   <select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="appearance-none bg-transparent font-bold text-blue-900 px-5 py-2 focus:outline-none cursor-pointer text-center uppercase tracking-wider min-w-[160px]">
                     {uniqueDates.map(dateStr => {

@@ -11,13 +11,12 @@ import models
 from datetime import datetime
 
 import bcrypt
-import jwt  # NEW: For generating secure session tokens
+import jwt  
 from jwt.exceptions import PyJWTError
 
 # --- CONFIGURATION ---
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
-# NEW: Secret key for encrypting our JWTs. (Add this to your .env file!)
 SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-fallback-key-change-me")
 ALGORITHM = "HS256"
 
@@ -32,11 +31,9 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 # --- LOCKED DOWN BOUNCER (CORS) ---
-# Replace localhost with your Vercel/Netlify domain when you launch!
-# --- LOCKED DOWN BOUNCER (CORS) ---
 origins = [
     "http://localhost:3000", 
-    "https://world-cup-app-ten.vercel.app"  # <-- ADD THIS LINE!
+    "https://world-cup-app-ten.vercel.app"  
 ]
 
 app.add_middleware(
@@ -66,24 +63,35 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(data: dict):
     return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
 
-# NEW: The Guard at the Door. This intercepts requests and checks their VIP wristband (Cookie)
+# --- THE BOUNCER ---
 def get_current_user(request: Request, db: Session = Depends(get_db)):
     token = request.cookies.get("wc_session")
+    
     if not token:
+        print("🚨 AUTH FAIL: No 'wc_session' cookie was attached to the request!")
         raise HTTPException(status_code=401, detail="Not authenticated. No cookie found.")
     
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: int = payload.get("sub")
-        if user_id is None:
+        user_id_str = payload.get("sub")
+        
+        if user_id_str is None:
+            print("🚨 AUTH FAIL: Token exists, but it is empty/corrupted.")
             raise HTTPException(status_code=401, detail="Invalid authentication token.")
-    except PyJWTError:
+            
+        # THE FIX: Convert the string back to an integer to search the database!
+        user_id = int(user_id_str)
+        
+    except PyJWTError as e:
+        print(f"🚨 AUTH FAIL: JWT Signature Error - {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid or expired authentication token.")
         
     user = db.query(models.User).filter(models.User.UserID == user_id).first()
     if user is None:
+        print(f"🚨 AUTH FAIL: Token valid, but User ID {user_id} is missing from the database.")
         raise HTTPException(status_code=401, detail="User not found.")
         
+    print(f"✅ AUTH SUCCESS: User {user.Username} authenticated successfully.")
     return user
 
 
@@ -103,6 +111,7 @@ class UserResponse(BaseModel):
     Email: str
     TotalPoints: int
     UpsetBadges: int
+    AvatarBase64: Optional[str] = None 
     class Config:
         from_attributes = True
 
@@ -134,6 +143,9 @@ class PropsUpdate(BaseModel):
     user_id: int
     props: dict  
 
+class AvatarUpdate(BaseModel):
+    user_id: int
+    avatar_base64: str
 
 # --- API ROUTES ---
 
@@ -168,9 +180,11 @@ def create_user(user: UserCreate, response: Response, db: Session = Depends(get_
     db.commit()
     db.refresh(db_user)
 
-    # Automatically log them in by issuing a cookie upon registration
-    token = create_access_token({"sub": db_user.UserID})
-    response.set_cookie(key="wc_session", value=token, httponly=True, secure=True, samesite="lax")
+    # THE FIX: Store the UserID as a String!
+    token = create_access_token({"sub": str(db_user.UserID)})
+    
+    # LOCAL TESTING SETTINGS: secure=False, samesite="lax"
+    response.set_cookie(key="wc_session", value=token, httponly=True, secure=False, samesite="lax")
     
     return db_user
 
@@ -181,33 +195,46 @@ def login_user(credentials: UserLogin, response: Response, db: Session = Depends
     if not user or not verify_password(credentials.password, user.PasswordHash):
         raise HTTPException(status_code=401, detail="Invalid username or password.")
         
-    # NEW: Generate the JWT and attach it to the response as an HttpOnly cookie
-    token = create_access_token({"sub": user.UserID})
-    response.set_cookie(
-        key="wc_session", 
-        value=token, 
-        httponly=True, # JavaScript CANNOT read this cookie (XSS protection)
-        secure=True,   # Only sent over HTTPS
-        samesite="lax"
-    )
+    # THE FIX: Store the UserID as a String!
+    token = create_access_token({"sub": str(user.UserID)})
+    
+    # LOCAL TESTING SETTINGS: secure=False, samesite="lax"
+    response.set_cookie(key="wc_session", value=token, httponly=True, secure=False, samesite="lax")
+    
     return user
 
 @app.get("/api/users", response_model=List[UserResponse])
 def get_users(db: Session = Depends(get_db)):
     return db.query(models.User).order_by(models.User.TotalPoints.desc()).all()
 
+@app.post("/api/users/avatar")
+def update_avatar(avatar_data: AvatarUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if avatar_data.user_id != current_user.UserID:
+        raise HTTPException(status_code=403, detail="You can only update your own avatar.")
+    
+    try:
+        db.execute(text("ALTER TABLE users ADD COLUMN AvatarBase64 TEXT"))
+        db.commit()
+    except Exception:
+        pass 
+        
+    db.execute(
+        text("UPDATE users SET AvatarBase64 = :avatar WHERE UserID = :uid"),
+        {"avatar": avatar_data.avatar_base64, "uid": avatar_data.user_id}
+    )
+    db.commit()
+    return {"status": "success", "message": "Avatar updated!"}
+
 
 # -- MATCH PICKS --
 
 @app.get("/api/users/{user_id}/picks", response_model=List[MatchPickResponse])
 def get_user_picks(user_id: int, db: Session = Depends(get_db)):
-    # Optional: You could secure this to only let users see their own picks until the game starts!
     picks = db.query(models.MatchPick).filter(models.MatchPick.UserID == user_id).all()
     return picks
 
 @app.post("/api/picks", response_model=MatchPickResponse)
 def submit_pick(pick: MatchPickCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    # SECURE: Prevent a user from submitting a pick for someone else!
     if pick.user_id != current_user.UserID:
         raise HTTPException(status_code=403, detail="Nice try. You can only submit picks for your own account.")
 
@@ -279,7 +306,6 @@ def get_user_bracket(user_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/bracket")
 def save_bracket(bracket: BracketUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    # SECURE: Prevent bracket tampering!
     if bracket.user_id != current_user.UserID:
         raise HTTPException(status_code=403, detail="You can only save your own bracket.")
 
@@ -329,7 +355,6 @@ def get_user_props(user_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/props")
 def save_props(props_data: PropsUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    # SECURE: Prevent props tampering!
     if props_data.user_id != current_user.UserID:
         raise HTTPException(status_code=403, detail="You can only save your own props.")
 
@@ -353,7 +378,6 @@ def save_props(props_data: PropsUpdate, db: Session = Depends(get_db), current_u
 # -- SCORING ENGINE (ADMIN) --
 @app.post("/api/admin/score")
 def score_match(result: MatchResultInput, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    # IDEALLY: Add an admin check here later! e.g., if current_user.Username != "TheDon09": raise HTTPException(403)
     picks = db.query(models.MatchPick).filter(models.MatchPick.MatchID == result.MatchID).all()
     winners_count = 0
     

@@ -184,7 +184,7 @@ def create_user(user: UserCreate, response: Response, db: Session = Depends(get_
     token = create_access_token({"sub": str(db_user.UserID)})
     
     # LOCAL TESTING SETTINGS: secure=False, samesite="lax"
-    response.set_cookie(key="wc_session", value=token, httponly=True, secure=False, samesite="lax")
+    response.set_cookie(key="wc_session", value=token, httponly=True, secure=True, samesite="lax")
     
     return db_user
 
@@ -199,7 +199,7 @@ def login_user(credentials: UserLogin, response: Response, db: Session = Depends
     token = create_access_token({"sub": str(user.UserID)})
     
     # LOCAL TESTING SETTINGS: secure=False, samesite="lax"
-    response.set_cookie(key="wc_session", value=token, httponly=True, secure=False, samesite="lax")
+    response.set_cookie(key="wc_session", value=token, httponly=True, secure=True, samesite="lax")
     
     return user
 

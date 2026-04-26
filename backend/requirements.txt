@@ -16,6 +16,7 @@ psycopg2-binary==2.9.12
 pydantic==2.13.0
 pydantic_core==2.46.0
 pyodbc==5.3.0
+PyJWT
 python-dotenv==1.2.2
 requests==2.33.1
 setuptools==82.0.1
